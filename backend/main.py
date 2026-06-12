@@ -35,6 +35,20 @@ def read_hardware_by_id(hardware_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Hardware not found")
     return db_hardware
 
+@app.put("/api/v1/hardware/{hardware_id}", response_model=schemas.Hardware)
+def update_hardware(hardware_id: int, hardware_update: schemas.HardwareUpdate, db: Session = Depends(get_db)):
+    db_hardware = db.query(models.Hardware).filter(models.Hardware.id == hardware_id).first()
+    if db_hardware is None:
+        raise HTTPException(status_code=404, detail="Hardware not found")
+    
+    update_data = hardware_update.dict(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(db_hardware, key, value)
+    
+    db.commit()
+    db.refresh(db_hardware)
+    return db_hardware
+
 @app.post("/hardware/{hardware_id}/upload-image")
 async def upload_hardware_image(hardware_id: int, file: UploadFile = File(...), db: Session = Depends(get_db)):
     db_hardware = db.query(models.Hardware).filter(models.Hardware.id == hardware_id).first()
