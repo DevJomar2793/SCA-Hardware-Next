@@ -16,7 +16,7 @@ app = FastAPI(title="Hardware Management API")
 from fastapi.staticfiles import StaticFiles
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-@app.post("/hardware/", response_model=schemas.Hardware, status_code=201)
+@app.post("/api/v1/add-hardware", response_model=schemas.Hardware, status_code=201)
 def create_hardware(hardware: schemas.HardwareCreate, db: Session = Depends(get_db)):
     db_hardware = models.Hardware(**hardware.dict())
     db.add(db_hardware)
@@ -24,11 +24,11 @@ def create_hardware(hardware: schemas.HardwareCreate, db: Session = Depends(get_
     db.refresh(db_hardware)
     return db_hardware
 
-@app.get("/hardware/", response_model=List[schemas.Hardware])
+@app.get("/api/v1/hardware-list", response_model=List[schemas.Hardware])
 def read_hardware(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     return db.query(models.Hardware).offset(skip).limit(limit).all()
 
-@app.get("/hardware/{hardware_id}", response_model=schemas.Hardware)
+@app.get("/api/v1/hardware-by-id/{hardware_id}", response_model=schemas.Hardware)
 def read_hardware_by_id(hardware_id: int, db: Session = Depends(get_db)):
     db_hardware = db.query(models.Hardware).filter(models.Hardware.id == hardware_id).first()
     if db_hardware is None:

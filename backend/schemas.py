@@ -23,7 +23,6 @@ class HardwareBase(BaseModel):
     price_peso: Optional[float] = None
     date_of_arrival: Optional[str] = None
     new_or_used: str
-    date_created: str
     image_path: Optional[str] = None
 
 class HardwareCreate(HardwareBase):
@@ -31,6 +30,7 @@ class HardwareCreate(HardwareBase):
 
 class Hardware(HardwareBase):
     id: int
+    date_created: Optional[str] = None
 
     class Config:
         from_attributes = True

@@ -1,5 +1,6 @@
 from sqlalchemy import Column, Integer, String, Float, Boolean
 from database import Base
+from datetime import datetime
 
 class Hardware(Base):
     __tablename__ = "hardware_table"
@@ -27,5 +28,5 @@ class Hardware(Base):
     date_of_arrival = Column(String, nullable=True)
     new_or_used = Column(String)
     image_path = Column(String, nullable=True)
-    date_created = Column(String)
+    date_created = Column(String, default=lambda: datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
  
