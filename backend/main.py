@@ -1,5 +1,6 @@
 import os
 from fastapi import FastAPI, Depends, HTTPException, UploadFile, File
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from typing import List
 
@@ -12,9 +13,20 @@ models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Hardware Management API")
 
+# CORS configuration
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # Mount static directory for images
 from fastapi.staticfiles import StaticFiles
 app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# <-------------------------------------------------Adds hardware to the database ------------------------------------------------->
 
 @app.post("/api/v1/add-hardware", response_model=schemas.Hardware, status_code=201)
 def create_hardware(hardware: schemas.HardwareCreate, db: Session = Depends(get_db)):
@@ -24,9 +36,13 @@ def create_hardware(hardware: schemas.HardwareCreate, db: Session = Depends(get_
     db.refresh(db_hardware)
     return db_hardware
 
+# <-------------------------------------------------Displays all hardware in the database ------------------------------------------------->
+
 @app.get("/api/v1/hardware-list", response_model=List[schemas.Hardware])
 def read_hardware(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     return db.query(models.Hardware).offset(skip).limit(limit).all()
+
+# <-------------------------------------------------Displays hardware by id in the database ------------------------------------------------->
 
 @app.get("/api/v1/hardware-by-id/{hardware_id}", response_model=schemas.Hardware)
 def read_hardware_by_id(hardware_id: int, db: Session = Depends(get_db)):
@@ -34,6 +50,8 @@ def read_hardware_by_id(hardware_id: int, db: Session = Depends(get_db)):
     if db_hardware is None:
         raise HTTPException(status_code=404, detail="Hardware not found")
     return db_hardware
+
+# <-------------------------------------------------Updates hardware in the database ------------------------------------------------->
 
 @app.put("/api/v1/hardware/{hardware_id}", response_model=schemas.Hardware)
 def update_hardware(hardware_id: int, hardware_update: schemas.HardwareUpdate, db: Session = Depends(get_db)):
@@ -49,7 +67,9 @@ def update_hardware(hardware_id: int, hardware_update: schemas.HardwareUpdate, d
     db.refresh(db_hardware)
     return db_hardware
 
-@app.post("/hardware/{hardware_id}/upload-image")
+# <-------------------------------------------------Uploads hardware image in the database ------------------------------------------------->
+
+@app.post("/api/v1hardware/{hardware_id}/upload-image")
 async def upload_hardware_image(hardware_id: int, file: UploadFile = File(...), db: Session = Depends(get_db)):
     db_hardware = db.query(models.Hardware).filter(models.Hardware.id == hardware_id).first()
     if db_hardware is None:
