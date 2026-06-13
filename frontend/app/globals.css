@@ -21,3 +21,16 @@ body {
   color: var(--foreground);
   background: var(--background);
 }
+
+.ckt-link {
+  color: #4f46e5 !important; /* indigo-600 */
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  text-decoration: none !important;
+  transition: color 0.2s ease-in-out !important;
+}
+
+.ckt-link:hover {
+  color: #3730a3 !important; /* indigo-800 */
+  text-decoration: underline !important;
+}
