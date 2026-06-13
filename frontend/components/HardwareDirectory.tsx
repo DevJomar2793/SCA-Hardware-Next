@@ -3,12 +3,15 @@
 import React, { useState, useEffect } from "react";
 import { Search, Filter, LayoutGrid, List, Plus, Loader2 } from "lucide-react";
 import { fetchHardwareList, Hardware } from "@/services/api";
+import { HardwareDetailModal } from "./HardwareDetailModal";
+import { AnimatePresence } from "framer-motion";
 
 export const HardwareDirectory: React.FC = () => {
   const [hardwareItems, setHardwareItems] = useState<Hardware[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedItem, setSelectedItem] = useState<Hardware | null>(null);
 
   useEffect(() => {
     const loadHardware = async () => {
@@ -144,8 +147,13 @@ export const HardwareDirectory: React.FC = () => {
                     key={item.id}
                     className="hover:bg-gray-50/50 transition-colors"
                   >
-                    <td className="px-6 py-4 text-sm font-medium text-slate-700">
-                      {item.ckt_item_number}
+                    <td className="px-6 py-4 text-sm font-medium">
+                      <button
+                        onClick={() => setSelectedItem(item)}
+                        className="text-purple-600 hover:text-purple-800 font-semibold hover:underline transition-colors cursor-pointer"
+                      >
+                        {item.ckt_item_number}
+                      </button>
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-600">
                       {item.hardware_type}
@@ -195,6 +203,14 @@ export const HardwareDirectory: React.FC = () => {
           </div>
         </div>
       </div>
+      <AnimatePresence>
+        {selectedItem && (
+          <HardwareDetailModal 
+            item={selectedItem} 
+            onClose={() => setSelectedItem(null)} 
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 };
