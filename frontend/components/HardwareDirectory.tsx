@@ -1,42 +1,86 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Search, Filter, LayoutGrid, List, Plus, Loader2 } from "lucide-react";
-import { fetchHardwareList, Hardware } from "@/services/api";
+import {
+  Search,
+  Filter,
+  LayoutGrid,
+  List,
+  Plus,
+  Loader2,
+  FileUp,
+} from "lucide-react";
+import { fetchHardwareList, importExcel, Hardware } from "@/services/api";
 import { HardwareDetailModal } from "./HardwareDetailModal";
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
+import { useRef } from "react";
 
 export const HardwareDirectory: React.FC = () => {
   const [hardwareItems, setHardwareItems] = useState<Hardware[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isImporting, setIsImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedItem, setSelectedItem] = useState<Hardware | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const loadHardware = async () => {
-      try {
-        setIsLoading(true);
-        const data = await fetchHardwareList();
-        setHardwareItems(data);
-      } catch (err) {
-        console.error("Failed to fetch hardware:", err);
-        setError(
-          err instanceof Error ? err.message : "An unexpected error occurred",
-        );
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     loadHardware();
   }, []);
 
+  const loadHardware = async () => {
+    try {
+      setIsLoading(true);
+      const data = await fetchHardwareList();
+      console.log(`Fetched ${data.length} hardware items from API`);
+      setHardwareItems(data);
+    } catch (err) {
+      console.error("Failed to fetch hardware:", err);
+      setError(
+        err instanceof Error ? err.message : "An unexpected error occurred",
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleImportExcel = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    console.log("Importing file:", file.name);
+
+    try {
+      setIsImporting(true);
+      setError(null);
+      const result = await importExcel(file);
+      console.log("Import successful:", result);
+      alert(
+        `Successfully imported ${result.imported} items. ${result.skipped} items were skipped.`,
+      );
+      await loadHardware();
+    } catch (err) {
+      console.error("Import failed:", err);
+      setError(
+        err instanceof Error ? err.message : "Failed to import Excel file",
+      );
+    } finally {
+      setIsImporting(false);
+      if (event.target) event.target.value = ""; // Reset input
+    }
+  };
+
   const filteredItems = hardwareItems.filter(
     (item) =>
-      item.ckt_item_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.model_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.manufacturer.toLowerCase().includes(searchTerm.toLowerCase()),
+      item.ckt_item_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.model_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.manufacturer?.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   if (error) {
@@ -65,10 +109,31 @@ export const HardwareDirectory: React.FC = () => {
         <h1 className="text-3xl font-bold text-slate-800">
           Hardware Directory
         </h1>
-        <button className="bg-white text-slate-700 px-4 py-2 rounded-lg shadow-sm border border-gray-200 font-medium hover:bg-gray-50 transition-colors flex items-center gap-2">
-          <Plus size={18} />
-          Add Hardware
-        </button>
+        <div className="flex items-center gap-3">
+          <button className="bg-white text-slate-700 px-4 py-2 rounded-lg shadow-sm border border-gray-200 font-medium hover:bg-gray-50 transition-colors flex items-center gap-2">
+            <Plus size={18} />
+            Add Hardware
+          </button>
+          <button
+            onClick={handleImportClick}
+            disabled={isImporting}
+            className={`bg-white text-slate-700 px-4 py-2 rounded-lg shadow-sm border border-gray-200 font-medium hover:bg-gray-50 transition-colors flex items-center gap-2 ${isImporting ? "opacity-70 cursor-not-allowed" : "cursor-pointer"}`}
+          >
+            {isImporting ? (
+              <Loader2 size={18} className="animate-spin" />
+            ) : (
+              <FileUp size={18} />
+            )}
+            {isImporting ? "Importing..." : "Import Excel"}
+          </button>
+          <input
+            type="file"
+            ref={fileInputRef}
+            className="hidden"
+            accept=".xlsx, .xls"
+            onChange={handleImportExcel}
+          />
+        </div>
       </div>
 
       {/* Main Table Card */}
@@ -203,14 +268,20 @@ export const HardwareDirectory: React.FC = () => {
           </div>
         </div>
       </div>
-      <AnimatePresence>
+      {/* <AnimatePresence>
         {selectedItem && (
-          <HardwareDetailModal 
-            item={selectedItem} 
-            onClose={() => setSelectedItem(null)} 
+          <HardwareDetailModal
+            item={selectedItem}
+            onClose={() => setSelectedItem(null)}
           />
         )}
-      </AnimatePresence>
+        {isAddModalOpen && (
+          <AddHardwareModal
+            onClose={() => setIsAddModalOpen(false)}
+            onSuccess={loadHardware}
+          />
+        )}
+      </AnimatePresence> */}
     </div>
   );
 };
