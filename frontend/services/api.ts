@@ -36,3 +36,20 @@ export async function fetchHardwareList(): Promise<Hardware[]> {
   
   return response.json();
 }
+
+export async function importExcel(file: File): Promise<{ imported: number; skipped: number }> {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const response = await fetch(`${API_BASE_URL}/api/v1/import-excel`, {
+    method: 'POST',
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || `API error: ${response.status} ${response.statusText}`);
+  }
+
+  return response.json();
+}

@@ -16,7 +16,7 @@ app = FastAPI(title="Hardware Management API")
 # CORS configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -25,6 +25,145 @@ app.add_middleware(
 # Mount static directory for images
 from fastapi.staticfiles import StaticFiles
 app.mount("/static", StaticFiles(directory="static"), name="static")
+
+@app.post("/api/v1/import-excel")
+async def import_excel(file: UploadFile = File(...), db: Session = Depends(get_db)):
+    import pandas as pd
+    import io
+    import re
+
+    def safe_float(val):
+        if val is None:
+            return None
+        try:
+            if pd.isna(val):
+                return None
+        except (TypeError, ValueError):
+            pass
+        if isinstance(val, (int, float)):
+            return float(val)
+        try:
+            # Remove currency symbols, commas, and whitespace
+            cleaned = re.sub(r'[^\d.]', '', str(val))
+            return float(cleaned) if cleaned else None
+        except (ValueError, TypeError):
+            return None
+
+    def safe_str(val):
+        """Convert a value to a clean string, or None if empty/NaN."""
+        if val is None:
+            return None
+        try:
+            if pd.isna(val):
+                return None
+        except (TypeError, ValueError):
+            pass
+        s = str(val).strip()
+        return s if s and s.lower() not in ('nan', 'none', 'nat') else None
+
+    def safe_int(val):
+        """Convert a value to int, or None if empty/NaN."""
+        if val is None:
+            return None
+        try:
+            if pd.isna(val):
+                return None
+        except (TypeError, ValueError):
+            pass
+        try:
+            return int(float(val))
+        except (ValueError, TypeError):
+            return None
+
+    if not file.filename.endswith(('.xlsx', '.xls')):
+        raise HTTPException(status_code=400, detail="Invalid file format. Please upload an Excel file.")
+
+    try:
+        contents = await file.read()
+        # The actual headers are on the 3rd row (index 2)
+        df = pd.read_excel(io.BytesIO(contents), header=2)
+
+        # Mapping: Excel Column Header -> (model_attr, converter)
+        COLUMN_MAPPING = {
+            'CKT Item # / Code':                              ('ckt_item_number',  safe_str),
+            'Hardware Type':                                   ('hardware_type',    safe_str),
+            'Notes':                                           ('notes',            safe_str),
+            'Date Tested':                                     ('date_tested',      safe_str),
+            'Qty':                                             ('qty',              safe_int),
+            'Manufacturer':                                    ('manufacturer',     safe_str),
+            'Warranty':                                        ('warranty',         safe_str),
+            'Model #':                                         ('model_number',     safe_str),
+            'Serial #':                                        ('serial_number',    safe_str),
+            'Screen\nSize ':                                   ('screen_size',      safe_str),
+            'Processor Type / Screen Type':                   ('processor_type',   safe_str),
+            'Processor Speed ':                               ('processor_speed',  safe_str),
+            'Operating\nSystem/Android Version/MAC OS ':      ('operating_system', safe_str),
+            'Ram':                                             ('ram',              safe_str),
+            'HD type':                                         ('hd_type',          safe_str),
+            'HD/STORAGE\nCapacity ':                          ('hd_storage',       safe_str),
+            'Operational Y/N':                                 ('operational',      safe_str),
+            'PRICE PAID IN PESO':                              ('price_peso',       safe_float),
+            'PRICE PAID IN USD':                               ('price_dollar',     safe_float),
+            'Date Arrival':                                    ('date_of_arrival',  safe_str),
+            'New or Used':                                     ('new_or_used',      safe_str),
+        }
+
+        imported_count = 0
+        skipped_count = 0
+
+        for _, row in df.iterrows():
+            try:
+                hardware_data = {}
+                for excel_col, (model_attr, converter) in COLUMN_MAPPING.items():
+                    if excel_col in df.columns:
+                        hardware_data[model_attr] = converter(row[excel_col])
+
+                # Skip completely empty rows (all mapped fields are None)
+                if all(v is None for v in hardware_data.values()):
+                    skipped_count += 1
+                    continue
+
+                # Skip rows with no identifying information at all
+                ckt = hardware_data.get('ckt_item_number')
+                serial = hardware_data.get('serial_number')
+                if not ckt and not serial:
+                    skipped_count += 1
+                    continue
+
+                # Duplicate detection: prefer Serial #, fall back to CKT Item #
+                if serial:
+                    existing = db.query(models.Hardware).filter(
+                        models.Hardware.serial_number == serial
+                    ).first()
+                    if existing:
+                        skipped_count += 1
+                        continue
+                elif ckt:
+                    # No serial — check by CKT item number + hardware type to avoid duplicates
+                    hw_type = hardware_data.get('hardware_type')
+                    existing = db.query(models.Hardware).filter(
+                        models.Hardware.ckt_item_number == ckt,
+                        models.Hardware.hardware_type == hw_type,
+                        models.Hardware.serial_number == None
+                    ).first()
+                    if existing:
+                        skipped_count += 1
+                        continue
+
+                new_hardware = models.Hardware(**hardware_data)
+                db.add(new_hardware)
+                db.commit()
+                imported_count += 1
+            except Exception as e:
+                db.rollback()
+                skipped_count += 1
+                continue
+
+        return {"imported": imported_count, "skipped": skipped_count}
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error processing excel file: {str(e)}")
 
 # <-------------------------------------------------Adds hardware to the database ------------------------------------------------->
 
