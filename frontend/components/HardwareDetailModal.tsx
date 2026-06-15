@@ -2,10 +2,38 @@
 
 import React, { useState } from "react";
 import { X, Images } from "lucide-react";
-import { Hardware } from "@/services/api";
+import { API_BASE_URL, Hardware } from "@/services/api";
 import { motion, AnimatePresence } from "framer-motion";
 
-const API_BASE_URL = "http://127.0.0.1:8000";
+const DetailRow = ({
+  label,
+  value,
+}: {
+  label: string;
+  value: string | number | null;
+}) => (
+  <div className="flex justify-between py-2 border-b border-gray-50 last:border-0">
+    <span className="text-sm text-slate-500 font-medium">{label}</span>
+    <span className="text-sm text-slate-800 font-semibold">
+      {value || "—"}
+    </span>
+  </div>
+);
+
+const DetailSection = ({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) => (
+  <div className="mb-6">
+    <h3 className="text-xs font-bold text-purple-600 uppercase tracking-wider mb-3">
+      {title}
+    </h3>
+    <div className="space-y-1">{children}</div>
+  </div>
+);
 
 interface HardwareDetailModalProps {
   item: Hardware | null;
@@ -18,42 +46,12 @@ export const HardwareDetailModal: React.FC<HardwareDetailModalProps> = ({
 }) => {
   const [activeImage, setActiveImage] = useState<string | null>(null);
 
-  // Sync active image whenever the selected item changes
-  React.useEffect(() => {
-    setActiveImage(item?.images?.[0] ?? null);
-  }, [item]);
-
   if (!item) return null;
 
-  const DetailRow = ({
-    label,
-    value,
-  }: {
-    label: string;
-    value: string | number | null;
-  }) => (
-    <div className="flex justify-between py-2 border-b border-gray-50 last:border-0">
-      <span className="text-sm text-slate-500 font-medium">{label}</span>
-      <span className="text-sm text-slate-800 font-semibold">
-        {value || "—"}
-      </span>
-    </div>
-  );
-
-  const DetailSection = ({
-    title,
-    children,
-  }: {
-    title: string;
-    children: React.ReactNode;
-  }) => (
-    <div className="mb-6">
-      <h3 className="text-xs font-bold text-purple-600 uppercase tracking-wider mb-3">
-        {title}
-      </h3>
-      <div className="space-y-1">{children}</div>
-    </div>
-  );
+  const displayedImage =
+    activeImage && item.images?.includes(activeImage)
+      ? activeImage
+      : item.images?.[0] ?? null;
 
   return (
     <motion.div
@@ -114,16 +112,16 @@ export const HardwareDetailModal: React.FC<HardwareDetailModalProps> = ({
                 {/* Main preview */}
                 <AnimatePresence mode="wait">
                   <motion.div
-                    key={activeImage ?? "empty"}
+                    key={displayedImage ?? "empty"}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.15 }}
                     className="w-full h-56 rounded-xl overflow-hidden border border-gray-200 bg-gray-50 flex items-center justify-center"
                   >
-                    {activeImage && (
+                    {displayedImage && (
                       <img
-                        src={`${API_BASE_URL}${activeImage}`}
+                        src={`${API_BASE_URL}${displayedImage}`}
                         alt="Hardware preview"
                         className="w-full h-full object-contain"
                       />
@@ -139,7 +137,7 @@ export const HardwareDetailModal: React.FC<HardwareDetailModalProps> = ({
                         key={i}
                         onClick={() => setActiveImage(img)}
                         className={`w-16 h-16 rounded-lg overflow-hidden border-2 transition-all shrink-0 ${
-                          activeImage === img
+                          displayedImage === img
                             ? "border-purple-500 shadow-md"
                             : "border-gray-200 hover:border-purple-300"
                         }`}

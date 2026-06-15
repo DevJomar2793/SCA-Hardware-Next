@@ -6,6 +6,7 @@ from typing import List
 
 import models
 import schemas
+from config import CORS_ORIGINS
 from database import engine, get_db
 
 # Create tables
@@ -16,7 +17,7 @@ app = FastAPI(title="Hardware Management API")
 # CORS configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -4,3 +4,4 @@ sqlalchemy
 python-multipart
 pandas
 openpyxl
+python-dotenv
