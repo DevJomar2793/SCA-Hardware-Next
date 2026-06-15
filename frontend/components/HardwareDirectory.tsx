@@ -9,9 +9,12 @@ import {
   Plus,
   Loader2,
   FileUp,
+  ChevronUp,
+  ChevronDown,
 } from "lucide-react";
 import { fetchHardwareList, importExcel, Hardware } from "@/services/api";
 import { HardwareDetailModal } from "./HardwareDetailModal";
+import { AddHardwareModal } from "./AddHardwareModal";
 import { AnimatePresence, motion } from "framer-motion";
 import { useRef } from "react";
 
@@ -19,9 +22,20 @@ export const HardwareDirectory: React.FC = () => {
   const [hardwareItems, setHardwareItems] = useState<Hardware[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isImporting, setIsImporting] = useState(false);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedItem, setSelectedItem] = useState<Hardware | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [filterType, setFilterType] = useState("All");
+  const [sortConfig, setSortConfig] = useState<{
+    key: keyof Hardware | null;
+    direction: "asc" | "desc" | null;
+  }>({
+    key: null,
+    direction: null,
+  });
+  const ITEMS_PER_PAGE = 15;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -76,12 +90,58 @@ export const HardwareDirectory: React.FC = () => {
     }
   };
 
-  const filteredItems = hardwareItems.filter(
-    (item) =>
-      item.ckt_item_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.model_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.manufacturer?.toLowerCase().includes(searchTerm.toLowerCase()),
+  const filteredItems = hardwareItems.filter((item) => {
+    const matchesSearch =
+      item.ckt_item_number?.toUpperCase().includes(searchTerm.toUpperCase()) ||
+      item.model_number?.toUpperCase().includes(searchTerm.toUpperCase()) ||
+      item.hardware_type?.toUpperCase().includes(searchTerm.toUpperCase()) ||
+      item.manufacturer?.toUpperCase().includes(searchTerm.toUpperCase());
+
+    const matchesType =
+      filterType === "All" || item.hardware_type === filterType;
+
+    return matchesSearch && matchesType;
+  });
+
+  const sortedItems = React.useMemo(() => {
+    if (!sortConfig.key || !sortConfig.direction) return filteredItems;
+
+    return [...filteredItems].sort((a, b) => {
+      const aValue = a[sortConfig.key!] ?? "";
+      const bValue = b[sortConfig.key!] ?? "";
+
+      if (aValue < bValue) return sortConfig.direction === "asc" ? -1 : 1;
+      if (aValue > bValue) return sortConfig.direction === "asc" ? 1 : -1;
+      return 0;
+    });
+  }, [filteredItems, sortConfig]);
+
+  const totalPages = Math.ceil(sortedItems.length / ITEMS_PER_PAGE);
+  const paginatedItems = sortedItems.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE,
   );
+
+  const handleSort = (key: keyof Hardware) => {
+    setSortConfig((prev) => {
+      if (prev.key === key && prev.direction === "asc") {
+        return { key, direction: "desc" };
+      } else if (prev.key === key && prev.direction === "desc") {
+        return { key: null, direction: null };
+      } else {
+        return { key, direction: "asc" };
+      }
+    });
+  };
+
+  const renderSortIcon = (key: keyof Hardware) => {
+    if (sortConfig.key !== key) return null;
+    if (sortConfig.direction === "asc")
+      return <ChevronUp size={14} className="ml-1" />;
+    if (sortConfig.direction === "desc")
+      return <ChevronDown size={14} className="ml-1" />;
+    return null;
+  };
 
   if (error) {
     return (
@@ -150,14 +210,27 @@ export const HardwareDirectory: React.FC = () => {
               placeholder="Search hardware..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all"
+              className="w-full pl-10 pr-4 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all"
             />
           </div>
           <div className="flex items-center gap-2">
-            <button className="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
-              <Filter size={16} />
-              Filter...
-            </button>
+            <div className="flex items-center gap-2">
+              <Filter size={16} className="text-gray-400" />
+              <select
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value)}
+                className="px-3 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors outline-none focus:ring-2 focus:ring-purple-500/20"
+              >
+                <option value="All">All Hardware Types</option>
+                {[...new Set(hardwareItems.map((item) => item.hardware_type))]
+                  .sort()
+                  .map((type) => (
+                    <option key={type} value={type}>
+                      {type}
+                    </option>
+                  ))}
+              </select>
+            </div>
             <div className="flex border border-gray-200 rounded-lg overflow-hidden">
               <button className="p-2 bg-gray-100 text-gray-600 border-r border-gray-200">
                 <List size={16} />
@@ -186,20 +259,45 @@ export const HardwareDirectory: React.FC = () => {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-100 sticky top-0 z-10">
-                  <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                    CKT#
+                  <th
+                    className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer hover:text-purple-600 transition-colors"
+                    onClick={() => handleSort("ckt_item_number")}
+                  >
+                    <div className="flex items-center">
+                      CKT# {renderSortIcon("ckt_item_number")}
+                    </div>
                   </th>
-                  <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                    Hardware Type
+                  <th
+                    className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer hover:text-purple-600 transition-colors"
+                    onClick={() => handleSort("hardware_type")}
+                  >
+                    <div className="flex items-center">
+                      Hardware Type {renderSortIcon("hardware_type")}
+                    </div>
                   </th>
-                  <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                    Brand
+                  <th
+                    className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer hover:text-purple-600 transition-colors"
+                    onClick={() => handleSort("manufacturer")}
+                  >
+                    <div className="flex items-center">
+                      Brand {renderSortIcon("manufacturer")}
+                    </div>
                   </th>
-                  <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                    Model
+                  <th
+                    className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer hover:text-purple-600 transition-colors"
+                    onClick={() => handleSort("model_number")}
+                  >
+                    <div className="flex items-center">
+                      Model {renderSortIcon("model_number")}
+                    </div>
                   </th>
-                  <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                    Created At
+                  <th
+                    className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer hover:text-purple-600 transition-colors"
+                    onClick={() => handleSort("date_created")}
+                  >
+                    <div className="flex items-center">
+                      Created At {renderSortIcon("date_created")}
+                    </div>
                   </th>
                   <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">
                     Actions
@@ -207,7 +305,7 @@ export const HardwareDirectory: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {filteredItems.map((item) => (
+                {paginatedItems.map((item) => (
                   <tr
                     key={item.id}
                     className="hover:bg-gray-50/50 transition-colors"
@@ -252,23 +350,66 @@ export const HardwareDirectory: React.FC = () => {
         {/* Table Footer */}
         <div className="p-4 border-t border-gray-100 flex items-center justify-between text-sm text-gray-500 shrink-0">
           <p>
-            Showing 1 to {filteredItems.length} of {filteredItems.length}{" "}
-            entries
+            Showing{" "}
+            {Math.min(
+              (currentPage - 1) * ITEMS_PER_PAGE + 1,
+              filteredItems.length,
+            )}{" "}
+            to {Math.min(currentPage * ITEMS_PER_PAGE, filteredItems.length)} of{" "}
+            {filteredItems.length} entries
           </p>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
             <button
-              className="px-3 py-1 border border-gray-200 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled
+              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+              className="px-3 py-1 border border-gray-200 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              disabled={currentPage === 1}
             >
               Previous
             </button>
-            <button className="px-3 py-1 border border-gray-200 rounded hover:bg-gray-50">
+            
+            <div className="flex gap-1">
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter((page) => {
+                  // Show first, last, and pages around current page
+                  if (page === 1 || page === totalPages) return true;
+                  return Math.abs(page - currentPage) <= 1;
+                })
+                .map((page, index, array) => {
+                  const isFirstEllipsis = index > 0 && page - array[index - 1] > 1;
+                  const isLastEllipsis = index < array.length - 1 && array[index + 1] - page > 1;
+
+                  return (
+                    <React.Fragment key={page}>
+                      {isFirstEllipsis && <span className="px-2 py-1">...</span>}
+                      <button
+                        onClick={() => setCurrentPage(page)}
+                        className={`px-3 py-1 border rounded transition-colors ${
+                          currentPage === page
+                            ? "bg-purple-600 text-white border-purple-600"
+                            : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+                        }`}
+                      >
+                        {page}
+                      </button>
+                      {isLastEllipsis && <span className="px-2 py-1">...</span>}
+                    </React.Fragment>
+                  );
+                })}
+            </div>
+
+            <button
+              onClick={() =>
+                setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+              }
+              className="px-3 py-1 border border-gray-200 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              disabled={currentPage === totalPages || totalPages === 0}
+            >
               Next {">"}
             </button>
           </div>
         </div>
       </div>
-      {/* <AnimatePresence>
+      <AnimatePresence>
         {selectedItem && (
           <HardwareDetailModal
             item={selectedItem}
@@ -281,7 +422,7 @@ export const HardwareDirectory: React.FC = () => {
             onSuccess={loadHardware}
           />
         )}
-      </AnimatePresence> */}
+      </AnimatePresence>
     </div>
   );
 };
