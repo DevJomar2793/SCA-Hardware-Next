@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { fetchHardwareList, importExcel, Hardware } from "@/services/api";
 import { HardwareDetailModal } from "./HardwareDetailModal";
+import { AddHardwareModal } from "./AddHardwareModal";
 import { AnimatePresence, motion } from "framer-motion";
 import { useRef } from "react";
 
@@ -19,9 +20,12 @@ export const HardwareDirectory: React.FC = () => {
   const [hardwareItems, setHardwareItems] = useState<Hardware[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isImporting, setIsImporting] = useState(false);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedItem, setSelectedItem] = useState<Hardware | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 15;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -81,6 +85,17 @@ export const HardwareDirectory: React.FC = () => {
       item.ckt_item_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.model_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.manufacturer?.toLowerCase().includes(searchTerm.toLowerCase()),
+  );
+
+  // Reset to page 1 when searching
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
+  const totalPages = Math.ceil(filteredItems.length / ITEMS_PER_PAGE);
+  const paginatedItems = filteredItems.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE,
   );
 
   if (error) {
@@ -207,7 +222,7 @@ export const HardwareDirectory: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {filteredItems.map((item) => (
+                {paginatedItems.map((item) => (
                   <tr
                     key={item.id}
                     className="hover:bg-gray-50/50 transition-colors"
@@ -252,23 +267,29 @@ export const HardwareDirectory: React.FC = () => {
         {/* Table Footer */}
         <div className="p-4 border-t border-gray-100 flex items-center justify-between text-sm text-gray-500 shrink-0">
           <p>
-            Showing 1 to {filteredItems.length} of {filteredItems.length}{" "}
+            Showing {Math.min((currentPage - 1) * ITEMS_PER_PAGE + 1, filteredItems.length)} to{" "}
+            {Math.min(currentPage * ITEMS_PER_PAGE, filteredItems.length)} of {filteredItems.length}{" "}
             entries
           </p>
           <div className="flex gap-2">
             <button
+              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
               className="px-3 py-1 border border-gray-200 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled
+              disabled={currentPage === 1}
             >
               Previous
             </button>
-            <button className="px-3 py-1 border border-gray-200 rounded hover:bg-gray-50">
+            <button 
+              onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+              className="px-3 py-1 border border-gray-200 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={currentPage === totalPages || totalPages === 0}
+            >
               Next {">"}
             </button>
           </div>
         </div>
       </div>
-      {/* <AnimatePresence>
+      <AnimatePresence>
         {selectedItem && (
           <HardwareDetailModal
             item={selectedItem}
@@ -281,7 +302,7 @@ export const HardwareDirectory: React.FC = () => {
             onSuccess={loadHardware}
           />
         )}
-      </AnimatePresence> */}
+      </AnimatePresence>
     </div>
   );
 };

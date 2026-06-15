@@ -26,6 +26,9 @@ app.add_middleware(
 from fastapi.staticfiles import StaticFiles
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
+
+# <-------------------------------------------------Imports hardware to the database ------------------------------------------------->
+
 @app.post("/api/v1/import-excel")
 async def import_excel(file: UploadFile = File(...), db: Session = Depends(get_db)):
     import pandas as pd
