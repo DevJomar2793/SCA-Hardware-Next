@@ -358,19 +358,50 @@ export const HardwareDirectory: React.FC = () => {
             to {Math.min(currentPage * ITEMS_PER_PAGE, filteredItems.length)} of{" "}
             {filteredItems.length} entries
           </p>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
             <button
               onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-              className="px-3 py-1 border border-gray-200 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-3 py-1 border border-gray-200 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               disabled={currentPage === 1}
             >
               Previous
             </button>
+            
+            <div className="flex gap-1">
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter((page) => {
+                  // Show first, last, and pages around current page
+                  if (page === 1 || page === totalPages) return true;
+                  return Math.abs(page - currentPage) <= 1;
+                })
+                .map((page, index, array) => {
+                  const isFirstEllipsis = index > 0 && page - array[index - 1] > 1;
+                  const isLastEllipsis = index < array.length - 1 && array[index + 1] - page > 1;
+
+                  return (
+                    <React.Fragment key={page}>
+                      {isFirstEllipsis && <span className="px-2 py-1">...</span>}
+                      <button
+                        onClick={() => setCurrentPage(page)}
+                        className={`px-3 py-1 border rounded transition-colors ${
+                          currentPage === page
+                            ? "bg-purple-600 text-white border-purple-600"
+                            : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+                        }`}
+                      >
+                        {page}
+                      </button>
+                      {isLastEllipsis && <span className="px-2 py-1">...</span>}
+                    </React.Fragment>
+                  );
+                })}
+            </div>
+
             <button
               onClick={() =>
                 setCurrentPage((prev) => Math.min(prev + 1, totalPages))
               }
-              className="px-3 py-1 border border-gray-200 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-3 py-1 border border-gray-200 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               disabled={currentPage === totalPages || totalPages === 0}
             >
               Next {">"}
