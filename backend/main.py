@@ -181,8 +181,14 @@ def create_hardware(hardware: schemas.HardwareCreate, db: Session = Depends(get_
 # <-------------------------------------------------Displays all hardware in the database ------------------------------------------------->
 
 @app.get("/api/v1/hardware-list", response_model=List[schemas.Hardware])
-def read_hardware(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    return db.query(models.Hardware).offset(skip).limit(limit).all()
+def read_hardware(skip: int = 0, limit: int = 5000, db: Session = Depends(get_db)):
+    return (
+        db.query(models.Hardware)
+        .order_by(models.Hardware.id.desc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
 
 # <-------------------------------------------------Displays hardware by id in the database ------------------------------------------------->
 
@@ -211,27 +217,64 @@ def update_hardware(hardware_id: int, hardware_update: schemas.HardwareUpdate, d
 
 # <-------------------------------------------------Uploads hardware image in the database ------------------------------------------------->
 
-@app.post("/api/v1hardware/{hardware_id}/upload-image")
-async def upload_hardware_image(hardware_id: int, file: UploadFile = File(...), db: Session = Depends(get_db)):
+ALLOWED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp"}
+ALLOWED_IMAGE_CONTENT_TYPES = {"image/jpeg", "image/png", "image/gif", "image/webp", "image/bmp"}
+MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024  # 10 MB
+
+@app.post("/api/v1/hardware/{hardware_id}/upload-image")
+async def upload_hardware_image(hardware_id: int, files: List[UploadFile] = File(...), db: Session = Depends(get_db)):
+    import uuid
+
     db_hardware = db.query(models.Hardware).filter(models.Hardware.id == hardware_id).first()
     if db_hardware is None:
         raise HTTPException(status_code=404, detail="Hardware not found")
-    
+
     # Define upload path
     upload_dir = "static/images"
     if not os.path.exists(upload_dir):
         os.makedirs(upload_dir)
-    
-    file_extension = os.path.splitext(file.filename)[1]
-    file_name = f"hardware_{hardware_id}{file_extension}"
-    file_path = os.path.join(upload_dir, file_name)
-    
-    # Save file
-    with open(file_path, "wb") as buffer:
-        buffer.write(await file.read())
-    
-    # Update database with path
-    db_hardware.image_path = f"/static/images/{file_name}"
+
+    uploaded_paths = []
+    for file in files:
+        # --- Validate file extension ---
+        ext = os.path.splitext(file.filename)[1].lower()
+        if ext not in ALLOWED_IMAGE_EXTENSIONS:
+            raise HTTPException(
+                status_code=400,
+                detail=f"File '{file.filename}' has an unsupported extension. Allowed: {', '.join(ALLOWED_IMAGE_EXTENSIONS)}"
+            )
+
+        # --- Validate MIME / Content-Type ---
+        if file.content_type not in ALLOWED_IMAGE_CONTENT_TYPES:
+            raise HTTPException(
+                status_code=400,
+                detail=f"File '{file.filename}' has an unsupported content type '{file.content_type}'."
+            )
+
+        # --- Read and enforce size limit ---
+        contents = await file.read()
+        if len(contents) > MAX_IMAGE_SIZE_BYTES:
+            raise HTTPException(
+                status_code=400,
+                detail=f"File '{file.filename}' exceeds the 10 MB size limit."
+            )
+
+        # --- Build safe, unique filename (no raw user input in path) ---
+        safe_name = f"hardware_{hardware_id}_{uuid.uuid4().hex}{ext}"
+        file_path = os.path.join(upload_dir, safe_name)
+
+        # Save file
+        with open(file_path, "wb") as buffer:
+            buffer.write(contents)
+
+        # Create HardwareImage entry
+        db_image = models.HardwareImage(
+            hardware_id=hardware_id,
+            image_path=f"/static/images/{safe_name}"
+        )
+        db.add(db_image)
+        uploaded_paths.append(db_image.image_path)
+
     db.commit()
-    
-    return {"filename": file_name, "path": db_hardware.image_path}
+
+    return {"uploaded_files": uploaded_paths}

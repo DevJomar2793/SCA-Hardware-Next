@@ -6,7 +6,7 @@ export interface Hardware {
   hardware_type: string;
   notes: string | null;
   date_tested: string | null;
-  qty: number;
+  qty: number | null;
   manufacturer: string;
   warranty: string | null;
   model_number: string;
@@ -23,7 +23,7 @@ export interface Hardware {
   price_peso: number | null;
   date_of_arrival: string | null;
   new_or_used: string;
-  image_path: string | null;
+  images: string[];
   date_created: string | null;
 }
 
@@ -52,4 +52,41 @@ export async function importExcel(file: File): Promise<{ imported: number; skipp
   }
 
   return response.json();
+}
+
+export async function addHardware(hardwareData: Partial<Hardware>): Promise<Hardware> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/add-hardware`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(hardwareData),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || `API error: ${response.status} ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
+export async function uploadHardwareImages(hardwareId: number, files: File[]): Promise<string[]> {
+  const formData = new FormData();
+  files.forEach((file) => {
+    formData.append('files', file);
+  });
+
+  const response = await fetch(`${API_BASE_URL}/api/v1/hardware/${hardwareId}/upload-image`, {
+    method: 'POST',
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || `API error: ${response.status} ${response.statusText}`);
+  }
+
+  const data = await response.json();
+  return data.uploaded_files;
 }

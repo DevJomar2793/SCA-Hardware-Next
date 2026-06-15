@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useCallback, useState, useEffect } from "react";
 import {
   Search,
   Filter,
@@ -11,6 +11,8 @@ import {
   FileUp,
   ChevronUp,
   ChevronDown,
+  CheckCircle2,
+  X,
 } from "lucide-react";
 import { fetchHardwareList, importExcel, Hardware } from "@/services/api";
 import { HardwareDetailModal } from "./HardwareDetailModal";
@@ -23,6 +25,7 @@ export const HardwareDirectory: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isImporting, setIsImporting] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedItem, setSelectedItem] = useState<Hardware | null>(null);
@@ -38,11 +41,7 @@ export const HardwareDirectory: React.FC = () => {
   const ITEMS_PER_PAGE = 15;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    loadHardware();
-  }, []);
-
-  const loadHardware = async () => {
+  const loadHardware = useCallback(async () => {
     try {
       setIsLoading(true);
       const data = await fetchHardwareList();
@@ -56,10 +55,33 @@ export const HardwareDirectory: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void loadHardware();
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [loadHardware]);
+
+  useEffect(() => {
+    if (!successMessage) return;
+
+    const timer = window.setTimeout(() => {
+      setSuccessMessage(null);
+    }, 4000);
+
+    return () => window.clearTimeout(timer);
+  }, [successMessage]);
 
   const handleImportClick = () => {
     fileInputRef.current?.click();
+  };
+
+  const handleAddHardwareSuccess = async () => {
+    setSuccessMessage("Hardware added successfully.");
+    await loadHardware();
   };
 
   const handleImportExcel = async (
@@ -164,13 +186,40 @@ export const HardwareDirectory: React.FC = () => {
 
   return (
     <div className="flex-1 bg-sky-50 p-8 flex flex-col">
+      <AnimatePresence>
+        {successMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: -12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            className="fixed right-6 top-6 z-[60] flex w-[calc(100%-3rem)] max-w-sm items-start gap-3 rounded-lg border border-emerald-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-lg"
+            role="status"
+            aria-live="polite"
+          >
+            <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" />
+            <p className="flex-1 font-medium">{successMessage}</p>
+            <button
+              type="button"
+              onClick={() => setSuccessMessage(null)}
+              className="rounded p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
+              aria-label="Dismiss notification"
+            >
+              <X size={16} />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Header */}
       <div className="flex justify-between items-center mb-8 shrink-0">
         <h1 className="text-3xl font-bold text-slate-800">
           Hardware Directory
         </h1>
         <div className="flex items-center gap-3">
-          <button className="bg-white text-slate-700 px-4 py-2 rounded-lg shadow-sm border border-gray-200 font-medium hover:bg-gray-50 transition-colors flex items-center gap-2">
+          <button
+            onClick={() => setIsAddModalOpen(true)}
+            className="bg-white text-slate-700 px-4 py-2 rounded-lg shadow-sm border border-gray-200 font-medium hover:bg-gray-50 transition-colors flex items-center gap-2"
+          >
             <Plus size={18} />
             Add Hardware
           </button>
@@ -366,7 +415,7 @@ export const HardwareDirectory: React.FC = () => {
             >
               Previous
             </button>
-            
+
             <div className="flex gap-1">
               {Array.from({ length: totalPages }, (_, i) => i + 1)
                 .filter((page) => {
@@ -375,12 +424,16 @@ export const HardwareDirectory: React.FC = () => {
                   return Math.abs(page - currentPage) <= 1;
                 })
                 .map((page, index, array) => {
-                  const isFirstEllipsis = index > 0 && page - array[index - 1] > 1;
-                  const isLastEllipsis = index < array.length - 1 && array[index + 1] - page > 1;
+                  const isFirstEllipsis =
+                    index > 0 && page - array[index - 1] > 1;
+                  const isLastEllipsis =
+                    index < array.length - 1 && array[index + 1] - page > 1;
 
                   return (
                     <React.Fragment key={page}>
-                      {isFirstEllipsis && <span className="px-2 py-1">...</span>}
+                      {isFirstEllipsis && (
+                        <span className="px-2 py-1">...</span>
+                      )}
                       <button
                         onClick={() => setCurrentPage(page)}
                         className={`px-3 py-1 border rounded transition-colors ${
@@ -419,7 +472,7 @@ export const HardwareDirectory: React.FC = () => {
         {isAddModalOpen && (
           <AddHardwareModal
             onClose={() => setIsAddModalOpen(false)}
-            onSuccess={loadHardware}
+            onSuccess={handleAddHardwareSuccess}
           />
         )}
       </AnimatePresence>
