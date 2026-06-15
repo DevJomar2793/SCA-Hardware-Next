@@ -11,14 +11,18 @@ interface AddHardwareModalProps {
   onSuccess: () => void | Promise<void>;
 }
 
-type AddHardwarePayload = Partial<Omit<Hardware, "id" | "images" | "date_created">>;
+type AddHardwarePayload = Partial<
+  Omit<Hardware, "id" | "images" | "date_created">
+>;
 
 export const AddHardwareModal: React.FC<AddHardwareModalProps> = ({
   onClose,
   onSuccess,
 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [uploadStatus, setUploadStatus] = useState<"idle" | "creating" | "uploading">("idle");
+  const [uploadStatus, setUploadStatus] = useState<
+    "idle" | "creating" | "uploading"
+  >("idle");
   const [error, setError] = useState<string | null>(null);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
@@ -63,7 +67,7 @@ export const AddHardwareModal: React.FC<AddHardwareModalProps> = ({
       const files = Array.from(e.target.files);
       setSelectedFiles((prev) => [...prev, ...files]);
 
-      const newPreviews = files.map(file => URL.createObjectURL(file));
+      const newPreviews = files.map((file) => URL.createObjectURL(file));
       setPreviews((prev) => [...prev, ...newPreviews]);
     }
     // Reset so the same file can be re-selected next time
@@ -96,7 +100,7 @@ export const AddHardwareModal: React.FC<AddHardwareModalProps> = ({
       };
 
       const newHardware = await addHardware(payload);
-      
+
       if (selectedFiles.length > 0) {
         setUploadStatus("uploading");
         await uploadHardwareImages(newHardware.id, selectedFiles);
@@ -119,7 +123,7 @@ export const AddHardwareModal: React.FC<AddHardwareModalProps> = ({
       setIsSubmitting(false);
       setUploadStatus("idle");
       // Cleanup object URLs
-      previews.forEach(url => URL.revokeObjectURL(url));
+      previews.forEach((url) => URL.revokeObjectURL(url));
     }
   };
 
@@ -426,26 +430,31 @@ export const AddHardwareModal: React.FC<AddHardwareModalProps> = ({
                 className="w-full px-3 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none"
               />
             </div>
-            
+
             <div className="space-y-3">
               <label className="block text-xs font-medium text-slate-500 mb-1">
                 Hardware Images
               </label>
-              <div 
+              <div
                 className="border-2 border-dashed border-gray-200 rounded-xl p-4 text-center hover:border-purple-400 transition-colors cursor-pointer relative group"
-                onClick={() => document.getElementById('file-upload')?.click()}
+                onClick={() => document.getElementById("file-upload")?.click()}
               >
-                <input 
+                <input
                   id="file-upload"
-                  type="file" 
-                  multiple 
+                  type="file"
+                  multiple
                   accept="image/*"
-                  className="hidden" 
+                  className="hidden"
                   onChange={handleFileChange}
                 />
                 <div className="flex flex-col items-center gap-2">
-                  <ImagePlus size={24} className="text-slate-400 group-hover:text-purple-500 transition-colors" />
-                  <span className="text-xs text-slate-500">Click to upload images</span>
+                  <ImagePlus
+                    size={24}
+                    className="text-slate-400 group-hover:text-purple-500 transition-colors"
+                  />
+                  <span className="text-xs text-slate-500">
+                    Click to upload images
+                  </span>
                 </div>
               </div>
 
@@ -459,7 +468,11 @@ export const AddHardwareModal: React.FC<AddHardwareModalProps> = ({
                       exit={{ opacity: 0, scale: 0.8 }}
                       className="relative aspect-square rounded-lg overflow-hidden border border-gray-200 group"
                     >
-                      <img src={url} alt="Preview" className="w-full h-full object-cover" />
+                      <img
+                        src={url}
+                        alt="Preview"
+                        className="w-full h-full object-cover"
+                      />
                       <button
                         type="button"
                         onClick={(e) => {
@@ -481,19 +494,21 @@ export const AddHardwareModal: React.FC<AddHardwareModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 bg-white border border-gray-200 text-slate-600 text-gray-600 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+              className="px-4 py-2 bg-white border border-gray-200 text-gray-600 rounded-lg font-medium hover:bg-gray-50 transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-4 py-2 bg-purple-600 text-white text-gray-600 rounded-lg font-medium hover:bg-purple-700 transition-colors flex items-center gap-2 disabled:opacity-50"
+              className="px-4 py-2 bg-purple-600  text-gray-600 rounded-lg font-medium hover:bg-purple-700 transition-colors flex items-center gap-2 disabled:opacity-50"
             >
               {isSubmitting && <Loader2 size={18} className="animate-spin" />}
-              {isSubmitting ? (
-                uploadStatus === "creating" ? "Creating..." : "Uploading Images..."
-              ) : "Add Hardware"}
+              {isSubmitting
+                ? uploadStatus === "creating"
+                  ? "Creating..."
+                  : "Uploading Images..."
+                : "Add Hardware"}
             </button>
           </div>
         </form>
