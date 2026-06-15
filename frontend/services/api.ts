@@ -84,6 +84,24 @@ export async function addHardware(
   return response.json();
 }
 
+export async function fetchNextCktNumber(
+  hardwareType: string,
+): Promise<string> {
+  const params = new URLSearchParams({ hardware_type: hardwareType });
+  const response = await fetch(`${API_BASE_URL}/api/v1/next-ckt-number?${params}`);
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(
+      errorData.detail ||
+        `API error: ${response.status} ${response.statusText}`,
+    );
+  }
+
+  const data = await response.json();
+  return data.ckt_item_number;
+}
+
 export async function uploadHardwareImages(
   hardwareId: number,
   files: File[],

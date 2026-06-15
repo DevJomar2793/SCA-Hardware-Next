@@ -6,6 +6,7 @@ from typing import List
 
 import models
 import schemas
+from ckt_numbers import generate_next_ckt_number
 from config import CORS_ORIGINS
 from database import engine, get_db
 
@@ -173,11 +174,20 @@ async def import_excel(file: UploadFile = File(...), db: Session = Depends(get_d
 
 @app.post("/api/v1/add-hardware", response_model=schemas.Hardware, status_code=201)
 def create_hardware(hardware: schemas.HardwareCreate, db: Session = Depends(get_db)):
-    db_hardware = models.Hardware(**hardware.dict())
+    hardware_data = hardware.dict()
+    hardware_data["ckt_item_number"] = generate_next_ckt_number(
+        hardware_data.get("hardware_type"),
+        db,
+    )
+    db_hardware = models.Hardware(**hardware_data)
     db.add(db_hardware)
     db.commit()
     db.refresh(db_hardware)
     return db_hardware
+
+@app.get("/api/v1/next-ckt-number")
+def read_next_ckt_number(hardware_type: str, db: Session = Depends(get_db)):
+    return {"ckt_item_number": generate_next_ckt_number(hardware_type, db)}
 
 # <-------------------------------------------------Displays all hardware in the database ------------------------------------------------->
 

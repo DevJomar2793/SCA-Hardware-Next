@@ -1,9 +1,14 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { X, Loader2, ImagePlus, Trash2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { addHardware, uploadHardwareImages, Hardware } from "@/services/api";
+import {
+  addHardware,
+  fetchNextCktNumber,
+  uploadHardwareImages,
+  Hardware,
+} from "@/services/api";
 import Swal from "sweetalert2";
 
 interface AddHardwareModalProps {
@@ -15,17 +20,76 @@ type AddHardwarePayload = Partial<
   Omit<Hardware, "id" | "images" | "date_created">
 >;
 
+const HARDWARE_TYPE_OPTIONS = [
+  "LAPTOP",
+  "DESKTOP",
+  "TABLET",
+  "CELLPHONE",
+  "MONITOR",
+  "WIRELESS ROUTER",
+  "SWITCH",
+  "AIRCON",
+  "EXTERNAL HARD DRIVE",
+  "HARD DISK DRIVE",
+  "BACKUP HUB",
+  "NETWORK ADAPTER",
+  "PRINTER",
+  "KEYBOARD",
+  "MOUSE",
+  "CRIMPING TOOL",
+  "MOUSE PAD",
+  "CARD READER",
+  "RJ45 CONNECTOR",
+  "WIRELESS MOUSE",
+  "THERMAL PASTE",
+  "BARCODE SCANNER",
+  "RAM",
+  "VGA TO HDMI ADAPTER",
+  "WIFI DONGLE",
+  "WIFI EXTENDER",
+  "CAT6 CABLES",
+  "5TB ENCLOSURE",
+  "SOLID STATE DRIVE",
+  "NVME / M.2 ENCLOSURE",
+  "SATA6 ENCLOSURE",
+  "CCTV",
+  "DOOR BELL",
+  "HEATGUN",
+  "TOOL BOX",
+  "SMART WATCH",
+  "HEADSET",
+  "ASSORTED CHARGERS",
+  "GRAPHICS CARD",
+  "TELEPHONE",
+  "Cooling Fan",
+  "Docker",
+];
+
 export const AddHardwareModal: React.FC<AddHardwareModalProps> = ({
   onClose,
   onSuccess,
 }) => {
+  const cktRequestId = useRef(0);
+  const previewsRef = useRef<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<
     "idle" | "creating" | "uploading"
   >("idle");
   const [error, setError] = useState<string | null>(null);
+  const [cktError, setCktError] = useState<string | null>(null);
+  const [isCktLoading, setIsCktLoading] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
+
+  useEffect(() => {
+    previewsRef.current = previews;
+  }, [previews]);
+
+  useEffect(() => {
+    return () => {
+      previewsRef.current.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, []);
 
   const [formData, setFormData] = useState({
     ckt_item_number: "",
@@ -50,12 +114,67 @@ export const AddHardwareModal: React.FC<AddHardwareModalProps> = ({
     notes: "",
   });
 
+  const loadNextCktNumber = async (hardwareType: string) => {
+    const requestId = cktRequestId.current + 1;
+    cktRequestId.current = requestId;
+
+    if (!hardwareType) {
+      setIsCktLoading(false);
+      setCktError(null);
+      setFormData((prev) => ({ ...prev, ckt_item_number: "" }));
+      return;
+    }
+
+    setIsCktLoading(true);
+    setCktError(null);
+
+    try {
+      const cktItemNumber = await fetchNextCktNumber(hardwareType);
+      if (cktRequestId.current !== requestId) {
+        return;
+      }
+
+      setFormData((prev) =>
+        prev.hardware_type === hardwareType
+          ? { ...prev, ckt_item_number: cktItemNumber }
+          : prev,
+      );
+    } catch (err) {
+      if (cktRequestId.current !== requestId) {
+        return;
+      }
+
+      setCktError(
+        err instanceof Error ? err.message : "Failed to generate CKT number",
+      );
+      setFormData((prev) =>
+        prev.hardware_type === hardwareType
+          ? { ...prev, ckt_item_number: "" }
+          : prev,
+      );
+    } finally {
+      if (cktRequestId.current === requestId) {
+        setIsCktLoading(false);
+      }
+    }
+  };
+
   const handleChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
     >,
   ) => {
     const { name, value } = e.target;
+    if (name === "hardware_type") {
+      setFormData((prev) => ({
+        ...prev,
+        hardware_type: value,
+        ckt_item_number: "",
+      }));
+      void loadNextCktNumber(value);
+      return;
+    }
+
     setFormData((prev) => ({
       ...prev,
       [name]: name === "qty" ? parseInt(value) || 0 : value,
@@ -89,6 +208,10 @@ export const AddHardwareModal: React.FC<AddHardwareModalProps> = ({
     setError(null);
 
     try {
+      if (!formData.ckt_item_number || isCktLoading || cktError) {
+        throw new Error("Please select a valid hardware type first.");
+      }
+
       const payload: AddHardwarePayload = {
         ...formData,
         price_dollar: formData.price_dollar
@@ -122,8 +245,6 @@ export const AddHardwareModal: React.FC<AddHardwareModalProps> = ({
     } finally {
       setIsSubmitting(false);
       setUploadStatus("idle");
-      // Cleanup object URLs
-      previews.forEach((url) => URL.revokeObjectURL(url));
     }
   };
 
@@ -176,21 +297,34 @@ export const AddHardwareModal: React.FC<AddHardwareModalProps> = ({
                     required
                     name="ckt_item_number"
                     value={formData.ckt_item_number}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none"
+                    readOnly
+                    placeholder={
+                      isCktLoading ? "Generating..." : "Select hardware type"
+                    }
+                    className="w-full px-3 py-2 border border-gray-200 bg-gray-50 text-gray-600 rounded-lg text-sm outline-none"
                   />
+                  {cktError && (
+                    <p className="mt-1 text-xs text-red-600">{cktError}</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-slate-500 mb-1">
                     Hardware Type
                   </label>
-                  <input
+                  <select
                     required
                     name="hardware_type"
                     value={formData.hardware_type}
                     onChange={handleChange}
                     className="w-full px-3 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none"
-                  />
+                  >
+                    <option value="">Select hardware type</option>
+                    {HARDWARE_TYPE_OPTIONS.map((hardwareType) => (
+                      <option key={hardwareType} value={hardwareType}>
+                        {hardwareType}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-slate-500 mb-1">
@@ -500,7 +634,7 @@ export const AddHardwareModal: React.FC<AddHardwareModalProps> = ({
             </button>
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || isCktLoading || Boolean(cktError)}
               className="px-4 py-2 bg-purple-600  text-gray-600 rounded-lg font-medium hover:bg-purple-700 transition-colors flex items-center gap-2 disabled:opacity-50"
             >
               {isSubmitting && <Loader2 size={18} className="animate-spin" />}
@@ -508,7 +642,9 @@ export const AddHardwareModal: React.FC<AddHardwareModalProps> = ({
                 ? uploadStatus === "creating"
                   ? "Creating..."
                   : "Uploading Images..."
-                : "Add Hardware"}
+                : isCktLoading
+                  ? "Generating CKT..."
+                  : "Add Hardware"}
             </button>
           </div>
         </form>
