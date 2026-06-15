@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, String, Float, Boolean
+from sqlalchemy import Column, Integer, String, Float, Boolean, ForeignKey
+from sqlalchemy.orm import relationship
 from database import Base
 from datetime import datetime
 
@@ -27,6 +28,20 @@ class Hardware(Base):
     price_peso = Column(Float, nullable=True)
     date_of_arrival = Column(String, nullable=True)
     new_or_used = Column(String)
-    image_path = Column(String, nullable=True)
     date_created = Column(String, default=lambda: datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    
+    image_objects = relationship("HardwareImage", back_populates="hardware", cascade="all, delete-orphan")
+
+    @property
+    def images(self):
+        return [img.image_path for img in self.image_objects]
+
+class HardwareImage(Base):
+    __tablename__ = "hardware_images"
+
+    id = Column(Integer, primary_key=True, index=True)
+    hardware_id = Column(Integer, ForeignKey("hardware_table.id"), nullable=False)
+    image_path = Column(String, nullable=False)
+
+    hardware = relationship("Hardware", back_populates="image_objects")
  

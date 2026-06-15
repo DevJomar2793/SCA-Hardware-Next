@@ -1,5 +1,5 @@
-from pydantic import BaseModel
-from typing import Optional
+from pydantic import BaseModel, field_validator
+from typing import Optional, List
 
 class HardwareBase(BaseModel):
     ckt_item_number: Optional[str] = None
@@ -23,7 +23,16 @@ class HardwareBase(BaseModel):
     price_peso: Optional[float] = None
     date_of_arrival: Optional[str] = None
     new_or_used: Optional[str] = None
-    image_path: Optional[str] = None
+
+    @field_validator("qty", mode="before")
+    @classmethod
+    def parse_qty(cls, value):
+        if value in (None, "", "-"):
+            return None
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return None
 
 class HardwareCreate(HardwareBase):
     pass
@@ -50,10 +59,10 @@ class HardwareUpdate(BaseModel):
     price_peso: Optional[float] = None
     date_of_arrival: Optional[str] = None
     new_or_used: Optional[str] = None
-    image_path: Optional[str] = None
 
 class Hardware(HardwareBase):
     id: int
+    images: List[str] = []
     date_created: Optional[str] = None
 
     class Config:
