@@ -4,11 +4,14 @@ import React, { useState } from "react";
 import { X, Loader2, ImagePlus, Trash2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { addHardware, uploadHardwareImages, Hardware } from "@/services/api";
+import Swal from "sweetalert2";
 
 interface AddHardwareModalProps {
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: () => void | Promise<void>;
 }
+
+type AddHardwarePayload = Partial<Omit<Hardware, "id" | "images" | "date_created">>;
 
 export const AddHardwareModal: React.FC<AddHardwareModalProps> = ({
   onClose,
@@ -82,7 +85,7 @@ export const AddHardwareModal: React.FC<AddHardwareModalProps> = ({
     setError(null);
 
     try {
-      const payload = {
+      const payload: AddHardwarePayload = {
         ...formData,
         price_dollar: formData.price_dollar
           ? parseFloat(formData.price_dollar)
@@ -92,14 +95,23 @@ export const AddHardwareModal: React.FC<AddHardwareModalProps> = ({
           : null,
       };
 
-      const newHardware = await addHardware(payload as any);
+      const newHardware = await addHardware(payload);
       
       if (selectedFiles.length > 0) {
         setUploadStatus("uploading");
         await uploadHardwareImages(newHardware.id, selectedFiles);
       }
 
-      onSuccess();
+      await onSuccess();
+      void Swal.fire({
+        toast: true,
+        position: "top-end",
+        icon: "success",
+        title: "Hardware added successfully",
+        showConfirmButton: false,
+        timer: 3000,
+        timerProgressBar: true,
+      });
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to add hardware");

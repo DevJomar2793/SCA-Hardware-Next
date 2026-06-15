@@ -11,13 +11,11 @@ import {
   FileUp,
   ChevronUp,
   ChevronDown,
-  CheckCircle2,
-  X,
 } from "lucide-react";
 import { fetchHardwareList, importExcel, Hardware } from "@/services/api";
 import { HardwareDetailModal } from "./HardwareDetailModal";
 import { AddHardwareModal } from "./AddHardwareModal";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence } from "framer-motion";
 import { useRef } from "react";
 
 export const HardwareDirectory: React.FC = () => {
@@ -25,7 +23,6 @@ export const HardwareDirectory: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isImporting, setIsImporting] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedItem, setSelectedItem] = useState<Hardware | null>(null);
@@ -65,22 +62,11 @@ export const HardwareDirectory: React.FC = () => {
     return () => window.clearTimeout(timer);
   }, [loadHardware]);
 
-  useEffect(() => {
-    if (!successMessage) return;
-
-    const timer = window.setTimeout(() => {
-      setSuccessMessage(null);
-    }, 4000);
-
-    return () => window.clearTimeout(timer);
-  }, [successMessage]);
-
   const handleImportClick = () => {
     fileInputRef.current?.click();
   };
 
   const handleAddHardwareSuccess = async () => {
-    setSuccessMessage("Hardware added successfully.");
     await loadHardware();
   };
 
@@ -186,30 +172,6 @@ export const HardwareDirectory: React.FC = () => {
 
   return (
     <div className="flex-1 bg-sky-50 p-8 flex flex-col">
-      <AnimatePresence>
-        {successMessage && (
-          <motion.div
-            initial={{ opacity: 0, y: -12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -12 }}
-            className="fixed right-6 top-6 z-[60] flex w-[calc(100%-3rem)] max-w-sm items-start gap-3 rounded-lg border border-emerald-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-lg"
-            role="status"
-            aria-live="polite"
-          >
-            <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" />
-            <p className="flex-1 font-medium">{successMessage}</p>
-            <button
-              type="button"
-              onClick={() => setSuccessMessage(null)}
-              className="rounded p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
-              aria-label="Dismiss notification"
-            >
-              <X size={16} />
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* Header */}
       <div className="flex justify-between items-center mb-8 shrink-0">
         <h1 className="text-3xl font-bold text-slate-800">
