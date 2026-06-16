@@ -15,9 +15,7 @@ const DetailRow = ({
 }) => (
   <div className="flex justify-between py-2 border-b border-gray-50 last:border-0">
     <span className="text-sm text-slate-500 font-medium">{label}</span>
-    <span className="text-sm text-slate-800 font-semibold">
-      {value || "—"}
-    </span>
+    <span className="text-sm text-slate-800 font-semibold">{value || "—"}</span>
   </div>
 );
 
@@ -53,7 +51,7 @@ export const HardwareDetailModal: React.FC<HardwareDetailModalProps> = ({
   const displayedImage =
     activeImage && item.images?.includes(activeImage)
       ? activeImage
-      : item.images?.[0] ?? null;
+      : (item.images?.[0] ?? null);
 
   return (
     <motion.div
@@ -244,7 +242,7 @@ export const HardwareDetailModal: React.FC<HardwareDetailModalProps> = ({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/85 p-4 sm:p-8"
+            className="fixed inset-0 z-70 flex items-center justify-center bg-slate-950/85 p-4 sm:p-8"
             onClick={() => setPreviewImage(null)}
           >
             <button
