@@ -46,6 +46,7 @@ export const HardwareDetailModal: React.FC<HardwareDetailModalProps> = ({
   onClose,
 }) => {
   const [activeImage, setActiveImage] = useState<string | null>(null);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   if (!item) return null;
 
@@ -118,7 +119,23 @@ export const HardwareDetailModal: React.FC<HardwareDetailModalProps> = ({
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.15 }}
-                    className="w-full h-56 rounded-xl overflow-hidden border border-gray-200 bg-gray-50 flex items-center justify-center"
+                    onClick={() => {
+                      if (displayedImage) {
+                        setPreviewImage(displayedImage);
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (
+                        displayedImage &&
+                        (e.key === "Enter" || e.key === " ")
+                      ) {
+                        e.preventDefault();
+                        setPreviewImage(displayedImage);
+                      }
+                    }}
+                    role={displayedImage ? "button" : undefined}
+                    tabIndex={displayedImage ? 0 : undefined}
+                    className="w-full h-56 rounded-xl overflow-hidden border border-gray-200 bg-gray-50 flex items-center justify-center cursor-zoom-in focus:outline-none focus:ring-2 focus:ring-purple-500/30"
                   >
                     {displayedImage && (
                       <img
@@ -220,6 +237,38 @@ export const HardwareDetailModal: React.FC<HardwareDetailModalProps> = ({
           </button>
         </div>
       </motion.div>
+
+      <AnimatePresence>
+        {previewImage && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/85 p-4 sm:p-8"
+            onClick={() => setPreviewImage(null)}
+          >
+            <button
+              type="button"
+              onClick={() => setPreviewImage(null)}
+              className="absolute right-4 top-4 inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/40"
+              aria-label="Close image preview"
+              title="Close image preview"
+            >
+              <X size={22} />
+            </button>
+            <motion.img
+              key={previewImage}
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.96 }}
+              src={`${API_BASE_URL}${previewImage}`}
+              alt="Hardware preview"
+              className="max-h-[92vh] max-w-[92vw] rounded-lg object-contain shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 };

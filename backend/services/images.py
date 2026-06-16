@@ -52,3 +52,13 @@ def save_hardware_image(hardware_id: int, extension: str, contents: bytes, db: S
     image_path = f"{PUBLIC_IMAGE_PREFIX}/{safe_name}"
     db.add(models.HardwareImage(hardware_id=hardware_id, image_path=image_path))
     return image_path
+
+
+def delete_hardware_image_file(image_path: str) -> None:
+    filename = os.path.basename(image_path)
+    if not filename:
+        return
+
+    file_path = os.path.join(IMAGE_UPLOAD_DIR, filename)
+    if os.path.exists(file_path):
+        os.remove(file_path)

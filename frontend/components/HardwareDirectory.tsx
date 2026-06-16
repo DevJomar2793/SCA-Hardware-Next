@@ -38,6 +38,7 @@ export const HardwareDirectory: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isImporting, setIsImporting] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<Hardware | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedItem, setSelectedItem] = useState<Hardware | null>(null);
@@ -82,6 +83,11 @@ export const HardwareDirectory: React.FC = () => {
 
   const handleAddHardwareSuccess = async () => {
     await loadHardware();
+  };
+
+  const handleEditHardwareSuccess = async () => {
+    await loadHardware();
+    setEditingItem(null);
   };
 
   const handleImportExcel = async (
@@ -388,6 +394,10 @@ export const HardwareDirectory: React.FC = () => {
                       <div className="flex justify-end gap-2">
                         <button
                           type="button"
+                          onClick={() => {
+                            setSelectedItem(null);
+                            setEditingItem(item);
+                          }}
                           className="inline-flex h-8 w-8 items-center justify-center rounded-md text-blue-600 transition-colors hover:bg-blue-50 hover:text-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
                           aria-label={`Edit ${item.ckt_item_number}`}
                           title="Edit hardware"
@@ -499,6 +509,14 @@ export const HardwareDirectory: React.FC = () => {
           <AddHardwareModal
             onClose={() => setIsAddModalOpen(false)}
             onSuccess={handleAddHardwareSuccess}
+          />
+        )}
+        {editingItem && (
+          <AddHardwareModal
+            hardware={editingItem}
+            onClose={() => setEditingItem(null)}
+            onImagesChanged={loadHardware}
+            onSuccess={handleEditHardwareSuccess}
           />
         )}
       </AnimatePresence>

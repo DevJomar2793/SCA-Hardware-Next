@@ -1,4 +1,8 @@
-import { AddHardwarePayload, Hardware } from "@/types/hardware";
+import {
+  AddHardwarePayload,
+  Hardware,
+  UpdateHardwarePayload,
+} from "@/types/hardware";
 
 export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000";
@@ -49,6 +53,22 @@ export async function addHardware(
   return response.json();
 }
 
+export async function updateHardware(
+  hardwareId: number,
+  hardwareData: UpdateHardwarePayload,
+): Promise<Hardware> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/hardware/${hardwareId}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(hardwareData),
+  });
+  await assertOk(response);
+
+  return response.json();
+}
+
 export async function deleteHardware(hardwareId: number): Promise<Hardware> {
   const response = await fetch(`${API_BASE_URL}/api/v1/hardware/${hardwareId}`, {
     method: "DELETE",
@@ -56,6 +76,23 @@ export async function deleteHardware(hardwareId: number): Promise<Hardware> {
   await assertOk(response);
 
   return response.json();
+}
+
+export async function deleteHardwareImage(
+  hardwareId: number,
+  imagePath: string,
+): Promise<string> {
+  const params = new URLSearchParams({ image_path: imagePath });
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/hardware/${hardwareId}/image?${params}`,
+    {
+      method: "DELETE",
+    },
+  );
+  await assertOk(response);
+
+  const data = await response.json();
+  return data.deleted_image;
 }
 
 export async function fetchNextCktNumber(

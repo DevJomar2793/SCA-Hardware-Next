@@ -5,22 +5,63 @@ import { X, Loader2, ImagePlus, Trash2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   addHardware,
+  API_BASE_URL,
+  deleteHardwareImage,
   fetchNextCktNumber,
+  updateHardware,
   uploadHardwareImages,
 } from "@/services/api";
 import { HARDWARE_TYPE_OPTIONS } from "@/constants/hardware";
-import { AddHardwarePayload } from "@/types/hardware";
+import {
+  AddHardwarePayload,
+  Hardware,
+  UpdateHardwarePayload,
+} from "@/types/hardware";
 import Swal from "sweetalert2";
 
 interface AddHardwareModalProps {
+  hardware?: Hardware;
   onClose: () => void;
+  onImagesChanged?: () => void | Promise<void>;
   onSuccess: () => void | Promise<void>;
 }
 
+const getInitialFormData = (hardware?: Hardware) => ({
+  ckt_item_number: hardware?.ckt_item_number ?? "",
+  hardware_type: hardware?.hardware_type ?? "",
+  manufacturer: hardware?.manufacturer ?? "",
+  model_number: hardware?.model_number ?? "",
+  serial_number: hardware?.serial_number ?? "",
+  qty: hardware?.qty ?? 1,
+  operational: hardware?.operational ?? "Operational",
+  new_or_used: hardware?.new_or_used ?? "New",
+  processor_type: hardware?.processor_type ?? "",
+  processor_speed: hardware?.processor_speed ?? "",
+  ram: hardware?.ram ?? "",
+  hd_type: hardware?.hd_type ?? "",
+  hd_storage: hardware?.hd_storage ?? "",
+  screen_size: hardware?.screen_size ?? "",
+  operating_system: hardware?.operating_system ?? "",
+  price_dollar:
+    hardware?.price_dollar === null || hardware?.price_dollar === undefined
+      ? ""
+      : String(hardware.price_dollar),
+  price_peso:
+    hardware?.price_peso === null || hardware?.price_peso === undefined
+      ? ""
+      : String(hardware.price_peso),
+  date_of_arrival: hardware?.date_of_arrival ?? "",
+  warranty: hardware?.warranty ?? "",
+  notes: hardware?.notes ?? "",
+});
+
 export const AddHardwareModal: React.FC<AddHardwareModalProps> = ({
+  hardware,
   onClose,
+  onImagesChanged,
   onSuccess,
 }) => {
+  const isEditMode = Boolean(hardware);
   const cktRequestId = useRef(0);
   const previewsRef = useRef<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -32,6 +73,16 @@ export const AddHardwareModal: React.FC<AddHardwareModalProps> = ({
   const [isCktLoading, setIsCktLoading] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
+  const [existingImages, setExistingImages] = useState<string[]>(
+    () => hardware?.images ?? [],
+  );
+  const [deletingImagePath, setDeletingImagePath] = useState<string | null>(
+    null,
+  );
+  const [previewImage, setPreviewImage] = useState<{
+    src: string;
+    alt: string;
+  } | null>(null);
 
   useEffect(() => {
     previewsRef.current = previews;
@@ -43,28 +94,7 @@ export const AddHardwareModal: React.FC<AddHardwareModalProps> = ({
     };
   }, []);
 
-  const [formData, setFormData] = useState({
-    ckt_item_number: "",
-    hardware_type: "",
-    manufacturer: "",
-    model_number: "",
-    serial_number: "",
-    qty: 1,
-    operational: "Operational",
-    new_or_used: "New",
-    processor_type: "",
-    processor_speed: "",
-    ram: "",
-    hd_type: "",
-    hd_storage: "",
-    screen_size: "",
-    operating_system: "",
-    price_dollar: "",
-    price_peso: "",
-    date_of_arrival: "",
-    warranty: "",
-    notes: "",
-  });
+  const [formData, setFormData] = useState(() => getInitialFormData(hardware));
 
   const loadNextCktNumber = async (hardwareType: string) => {
     const requestId = cktRequestId.current + 1;
@@ -121,9 +151,11 @@ export const AddHardwareModal: React.FC<AddHardwareModalProps> = ({
       setFormData((prev) => ({
         ...prev,
         hardware_type: value,
-        ckt_item_number: "",
+        ckt_item_number: isEditMode ? prev.ckt_item_number : "",
       }));
-      void loadNextCktNumber(value);
+      if (!isEditMode) {
+        void loadNextCktNumber(value);
+      }
       return;
     }
 
@@ -153,6 +185,51 @@ export const AddHardwareModal: React.FC<AddHardwareModalProps> = ({
     setPreviews(newPreviews);
   };
 
+  const handleDeleteExistingImage = async (imagePath: string) => {
+    if (!hardware) return;
+
+    const result = await Swal.fire({
+      title: "Delete image?",
+      text: "This will permanently delete this uploaded image.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Delete",
+      cancelButtonText: "Cancel",
+      confirmButtonColor: "#dc2626",
+      cancelButtonColor: "#64748b",
+      reverseButtons: true,
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+      setDeletingImagePath(imagePath);
+      await deleteHardwareImage(hardware.id, imagePath);
+      setExistingImages((prev) => prev.filter((path) => path !== imagePath));
+      await onImagesChanged?.();
+      void Swal.fire({
+        toast: true,
+        position: "top-end",
+        icon: "success",
+        title: "Image deleted",
+        showConfirmButton: false,
+        timer: 2500,
+        timerProgressBar: true,
+      });
+    } catch (err) {
+      void Swal.fire({
+        title: "Delete failed",
+        text:
+          err instanceof Error
+            ? err.message
+            : "Failed to delete hardware image.",
+        icon: "error",
+      });
+    } finally {
+      setDeletingImagePath(null);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -174,11 +251,13 @@ export const AddHardwareModal: React.FC<AddHardwareModalProps> = ({
           : null,
       };
 
-      const newHardware = await addHardware(payload);
+      const savedHardware = isEditMode
+        ? await updateHardware(hardware!.id, payload as UpdateHardwarePayload)
+        : await addHardware(payload);
 
       if (selectedFiles.length > 0) {
         setUploadStatus("uploading");
-        await uploadHardwareImages(newHardware.id, selectedFiles);
+        await uploadHardwareImages(savedHardware.id, selectedFiles);
       }
 
       await onSuccess();
@@ -186,14 +265,20 @@ export const AddHardwareModal: React.FC<AddHardwareModalProps> = ({
         toast: true,
         position: "top-end",
         icon: "success",
-        title: "Hardware added successfully",
+        title: isEditMode
+          ? "Hardware updated successfully"
+          : "Hardware added successfully",
         showConfirmButton: false,
         timer: 3000,
         timerProgressBar: true,
       });
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to add hardware");
+      setError(
+        err instanceof Error
+          ? err.message
+          : `Failed to ${isEditMode ? "update" : "add"} hardware`,
+      );
     } finally {
       setIsSubmitting(false);
       setUploadStatus("idle");
@@ -219,7 +304,9 @@ export const AddHardwareModal: React.FC<AddHardwareModalProps> = ({
         className="relative bg-white w-full max-w-3xl text-gray-600 rounded-2xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col max-h-[90vh]"
       >
         <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-          <h2 className="text-xl font-bold text-slate-800">Add New Hardware</h2>
+          <h2 className="text-xl font-bold text-slate-800">
+            {isEditMode ? "Edit Hardware" : "Add New Hardware"}
+          </h2>
           <button
             onClick={onClose}
             className="p-2 hover:bg-gray-200  rounded-full transition-colors text-slate-400 hover:text-slate-600"
@@ -539,20 +626,88 @@ export const AddHardwareModal: React.FC<AddHardwareModalProps> = ({
                     className="text-slate-400 group-hover:text-purple-500 transition-colors"
                   />
                   <span className="text-xs text-slate-500">
-                    Click to upload images
+                    {isEditMode
+                      ? "Click to add more images"
+                      : "Click to upload images"}
                   </span>
                 </div>
               </div>
 
-              <div className="grid grid-cols-4 gap-2 max-h-32 overflow-y-auto p-1">
+              <div className="grid grid-cols-4 gap-2 max-h-48 overflow-y-auto p-1">
                 <AnimatePresence>
+                  {existingImages.map((imagePath) => (
+                    <motion.div
+                      key={imagePath}
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.8 }}
+                      onClick={() =>
+                        setPreviewImage({
+                          src: `${API_BASE_URL}${imagePath}`,
+                          alt: "Uploaded hardware",
+                        })
+                      }
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setPreviewImage({
+                            src: `${API_BASE_URL}${imagePath}`,
+                            alt: "Uploaded hardware",
+                          });
+                        }
+                      }}
+                      role="button"
+                      tabIndex={0}
+                      className="relative aspect-square rounded-lg overflow-hidden border border-gray-200 group cursor-zoom-in focus:outline-none focus:ring-2 focus:ring-purple-500/30"
+                    >
+                      <img
+                        src={`${API_BASE_URL}${imagePath}`}
+                        alt="Uploaded hardware"
+                        className="w-full h-full object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          void handleDeleteExistingImage(imagePath);
+                        }}
+                        disabled={deletingImagePath === imagePath}
+                        className="absolute top-1 right-1 inline-flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white opacity-0 transition-opacity hover:bg-red-600 group-hover:opacity-100 disabled:cursor-not-allowed disabled:opacity-100"
+                        aria-label="Delete uploaded image"
+                        title="Delete uploaded image"
+                      >
+                        {deletingImagePath === imagePath ? (
+                          <Loader2 size={12} className="animate-spin" />
+                        ) : (
+                          <Trash2 size={12} />
+                        )}
+                      </button>
+                    </motion.div>
+                  ))}
                   {previews.map((url, index) => (
                     <motion.div
                       key={url}
                       initial={{ opacity: 0, scale: 0.8 }}
                       animate={{ opacity: 1, scale: 1 }}
                       exit={{ opacity: 0, scale: 0.8 }}
-                      className="relative aspect-square rounded-lg overflow-hidden border border-gray-200 group"
+                      onClick={() =>
+                        setPreviewImage({
+                          src: url,
+                          alt: "Selected hardware preview",
+                        })
+                      }
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setPreviewImage({
+                            src: url,
+                            alt: "Selected hardware preview",
+                          });
+                        }
+                      }}
+                      role="button"
+                      tabIndex={0}
+                      className="relative aspect-square rounded-lg overflow-hidden border border-gray-200 group cursor-zoom-in focus:outline-none focus:ring-2 focus:ring-purple-500/30"
                     >
                       <img
                         src={url}
@@ -586,21 +741,61 @@ export const AddHardwareModal: React.FC<AddHardwareModalProps> = ({
             </button>
             <button
               type="submit"
-              disabled={isSubmitting || isCktLoading || Boolean(cktError)}
-              className="px-4 py-2 bg-purple-600  text-gray-600 rounded-lg font-medium hover:bg-purple-700 transition-colors flex items-center gap-2 disabled:opacity-50"
+              disabled={
+                isSubmitting ||
+                (!isEditMode && isCktLoading) ||
+                (!isEditMode && Boolean(cktError))
+              }
+              className="px-4 py-2 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition-colors flex items-center gap-2 disabled:opacity-50"
             >
               {isSubmitting && <Loader2 size={18} className="animate-spin" />}
               {isSubmitting
                 ? uploadStatus === "creating"
-                  ? "Creating..."
+                  ? isEditMode
+                    ? "Saving..."
+                    : "Creating..."
                   : "Uploading Images..."
                 : isCktLoading
                   ? "Generating CKT..."
-                  : "Add Hardware"}
+                  : isEditMode
+                    ? "Save Changes"
+                    : "Add Hardware"}
             </button>
           </div>
         </form>
       </motion.div>
+
+      <AnimatePresence>
+        {previewImage && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/85 p-4 sm:p-8"
+            onClick={() => setPreviewImage(null)}
+          >
+            <button
+              type="button"
+              onClick={() => setPreviewImage(null)}
+              className="absolute right-4 top-4 inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/40"
+              aria-label="Close image preview"
+              title="Close image preview"
+            >
+              <X size={22} />
+            </button>
+            <motion.img
+              key={previewImage.src}
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.96 }}
+              src={previewImage.src}
+              alt={previewImage.alt}
+              className="max-h-[92vh] max-w-[92vw] rounded-lg object-contain shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 };

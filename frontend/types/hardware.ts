@@ -29,6 +29,10 @@ export type AddHardwarePayload = Partial<
   Omit<Hardware, "id" | "images" | "date_created">
 >;
 
+export type UpdateHardwarePayload = Partial<
+  Omit<Hardware, "id" | "images" | "date_created">
+>;
+
 export type SortDirection = "asc" | "desc" | null;
 
 export interface HardwareSortConfig {
