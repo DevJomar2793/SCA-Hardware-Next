@@ -1,10 +1,12 @@
 import os
+from pathlib import Path
 
 from dotenv import load_dotenv
 
 load_dotenv()
 
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./hardware.db")
+BASE_DIR = Path(__file__).resolve().parent
+DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{BASE_DIR / 'hardware.db'}")
 CORS_ORIGINS = [
     origin.strip()
     for origin in os.getenv(
@@ -13,3 +15,5 @@ CORS_ORIGINS = [
     ).split(",")
     if origin.strip()
 ]
+STATIC_DIR = BASE_DIR / "static"
+IMAGE_UPLOAD_DIR = STATIC_DIR / "images"
