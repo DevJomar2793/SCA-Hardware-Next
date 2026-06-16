@@ -84,6 +84,22 @@ export async function addHardware(
   return response.json();
 }
 
+export async function deleteHardware(hardwareId: number): Promise<Hardware> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/hardware/${hardwareId}`, {
+    method: "DELETE",
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(
+      errorData.detail ||
+        `API error: ${response.status} ${response.statusText}`,
+    );
+  }
+
+  return response.json();
+}
+
 export async function fetchNextCktNumber(
   hardwareType: string,
 ): Promise<string> {

@@ -61,8 +61,8 @@ const HARDWARE_TYPE_OPTIONS = [
   "ASSORTED CHARGERS",
   "GRAPHICS CARD",
   "TELEPHONE",
-  "Cooling Fan",
-  "Docker",
+  "COOLING FAN",
+  "DOCKER",
 ];
 
 export const AddHardwareModal: React.FC<AddHardwareModalProps> = ({

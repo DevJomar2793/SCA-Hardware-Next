@@ -11,12 +11,20 @@ import {
   FileUp,
   ChevronUp,
   ChevronDown,
+  Pencil,
+  Trash2,
 } from "lucide-react";
-import { fetchHardwareList, importExcel, Hardware } from "@/services/api";
+import {
+  deleteHardware,
+  fetchHardwareList,
+  importExcel,
+  Hardware,
+} from "@/services/api";
 import { HardwareDetailModal } from "./HardwareDetailModal";
 import { AddHardwareModal } from "./AddHardwareModal";
 import { AnimatePresence } from "framer-motion";
 import { useRef } from "react";
+import Swal from "sweetalert2";
 
 export const HardwareDirectory: React.FC = () => {
   const [hardwareItems, setHardwareItems] = useState<Hardware[]>([]);
@@ -26,6 +34,9 @@ export const HardwareDirectory: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedItem, setSelectedItem] = useState<Hardware | null>(null);
+  const [deletingHardwareId, setDeletingHardwareId] = useState<number | null>(
+    null,
+  );
   const [currentPage, setCurrentPage] = useState(1);
   const [filterType, setFilterType] = useState("All");
   const [sortConfig, setSortConfig] = useState<{
@@ -149,6 +160,58 @@ export const HardwareDirectory: React.FC = () => {
     if (sortConfig.direction === "desc")
       return <ChevronDown size={14} className="ml-1" />;
     return null;
+  };
+
+  const handleDeleteHardware = async (item: Hardware) => {
+    const result = await Swal.fire({
+      title: "Delete hardware?",
+      text: `This will permanently delete ${item.ckt_item_number}.`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Delete",
+      cancelButtonText: "Cancel",
+      confirmButtonColor: "#dc2626",
+      cancelButtonColor: "#64748b",
+      reverseButtons: true,
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+      setDeletingHardwareId(item.id);
+      await deleteHardware(item.id);
+      setHardwareItems((prev) =>
+        prev.filter((hardwareItem) => hardwareItem.id !== item.id),
+      );
+      const remainingVisibleItems = sortedItems.length - 1;
+      const nextTotalPages = Math.max(
+        1,
+        Math.ceil(remainingVisibleItems / ITEMS_PER_PAGE),
+      );
+      if (currentPage > nextTotalPages) {
+        setCurrentPage(nextTotalPages);
+      }
+      setSelectedItem((prev) => (prev?.id === item.id ? null : prev));
+      void Swal.fire({
+        title: "Deleted",
+        text: `${item.ckt_item_number} has been deleted.`,
+        icon: "success",
+        timer: 1800,
+        showConfirmButton: false,
+      });
+    } catch (err) {
+      console.error("Failed to delete hardware:", err);
+      void Swal.fire({
+        title: "Delete failed",
+        text:
+          err instanceof Error
+            ? err.message
+            : "Failed to delete hardware item.",
+        icon: "error",
+      });
+    } finally {
+      setDeletingHardwareId(null);
+    }
   };
 
   if (error) {
@@ -342,12 +405,28 @@ export const HardwareDirectory: React.FC = () => {
                       {item.date_created}
                     </td>
                     <td className="px-6 py-4 text-sm text-right">
-                      <div className="flex justify-end gap-3">
-                        <button className="text-blue-600 hover:text-blue-800 font-medium">
-                          Edit
+                      <div className="flex justify-end gap-2">
+                        <button
+                          type="button"
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-md text-blue-600 transition-colors hover:bg-blue-50 hover:text-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                          aria-label={`Edit ${item.ckt_item_number}`}
+                          title="Edit hardware"
+                        >
+                          <Pencil size={16} />
                         </button>
-                        <button className="text-red-600 hover:text-red-800 font-medium">
-                          Delete
+                        <button
+                          type="button"
+                          onClick={() => void handleDeleteHardware(item)}
+                          disabled={deletingHardwareId === item.id}
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-md text-red-600 transition-colors hover:bg-red-50 hover:text-red-800 focus:outline-none focus:ring-2 focus:ring-red-500/30 disabled:cursor-not-allowed disabled:opacity-60"
+                          aria-label={`Delete ${item.ckt_item_number}`}
+                          title="Delete hardware"
+                        >
+                          {deletingHardwareId === item.id ? (
+                            <Loader2 size={16} className="animate-spin" />
+                          ) : (
+                            <Trash2 size={16} />
+                          )}
                         </button>
                       </div>
                     </td>

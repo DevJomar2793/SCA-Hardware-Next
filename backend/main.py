@@ -226,6 +226,17 @@ def update_hardware(hardware_id: int, hardware_update: schemas.HardwareUpdate, d
     db.refresh(db_hardware)
     return db_hardware
 
+# <-------------------------------------------------Updates hardware in the database ------------------------------------------------->
+
+@app.delete("/api/v1/hardware/{hardware_id}", response_model=schemas.Hardware)
+def delete_hardware(hardware_id: int, db: Session = Depends(get_db)):
+    db_hardware = db.query(models.Hardware).filter(models.Hardware.id == hardware_id).first()
+    if db_hardware is None:
+        raise HTTPException(status_code=404, detail="Hardware not found")
+    db.delete(db_hardware)
+    db.commit()
+    return db_hardware
+
 # <-------------------------------------------------Uploads hardware image in the database ------------------------------------------------->
 
 ALLOWED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp"}
