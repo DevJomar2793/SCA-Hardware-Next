@@ -2,7 +2,8 @@
 
 import React, { useState } from "react";
 import { X, Images } from "lucide-react";
-import { API_BASE_URL, Hardware } from "@/services/api";
+import { API_BASE_URL } from "@/services/api";
+import { Hardware } from "@/types/hardware";
 import { motion, AnimatePresence } from "framer-motion";
 
 const DetailRow = ({

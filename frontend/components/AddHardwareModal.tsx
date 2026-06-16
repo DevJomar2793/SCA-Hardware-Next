@@ -7,63 +7,15 @@ import {
   addHardware,
   fetchNextCktNumber,
   uploadHardwareImages,
-  Hardware,
 } from "@/services/api";
+import { HARDWARE_TYPE_OPTIONS } from "@/constants/hardware";
+import { AddHardwarePayload } from "@/types/hardware";
 import Swal from "sweetalert2";
 
 interface AddHardwareModalProps {
   onClose: () => void;
   onSuccess: () => void | Promise<void>;
 }
-
-type AddHardwarePayload = Partial<
-  Omit<Hardware, "id" | "images" | "date_created">
->;
-
-const HARDWARE_TYPE_OPTIONS = [
-  "LAPTOP",
-  "DESKTOP",
-  "TABLET",
-  "CELLPHONE",
-  "MONITOR",
-  "WIRELESS ROUTER",
-  "SWITCH",
-  "AIRCON",
-  "EXTERNAL HARD DRIVE",
-  "HARD DISK DRIVE",
-  "BACKUP HUB",
-  "NETWORK ADAPTER",
-  "PRINTER",
-  "KEYBOARD",
-  "MOUSE",
-  "CRIMPING TOOL",
-  "MOUSE PAD",
-  "CARD READER",
-  "RJ45 CONNECTOR",
-  "WIRELESS MOUSE",
-  "THERMAL PASTE",
-  "BARCODE SCANNER",
-  "RAM",
-  "VGA TO HDMI ADAPTER",
-  "WIFI DONGLE",
-  "WIFI EXTENDER",
-  "CAT6 CABLES",
-  "5TB ENCLOSURE",
-  "SOLID STATE DRIVE",
-  "NVME / M.2 ENCLOSURE",
-  "SATA6 ENCLOSURE",
-  "CCTV",
-  "DOOR BELL",
-  "HEATGUN",
-  "TOOL BOX",
-  "SMART WATCH",
-  "HEADSET",
-  "ASSORTED CHARGERS",
-  "GRAPHICS CARD",
-  "TELEPHONE",
-  "COOLING FAN",
-  "DOCKER",
-];
 
 export const AddHardwareModal: React.FC<AddHardwareModalProps> = ({
   onClose,

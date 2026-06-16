@@ -18,8 +18,15 @@ import {
   deleteHardware,
   fetchHardwareList,
   importExcel,
-  Hardware,
 } from "@/services/api";
+import { HARDWARE_ITEMS_PER_PAGE } from "@/constants/hardware";
+import {
+  filterHardwareItems,
+  getNextSortConfig,
+  paginateHardwareItems,
+  sortHardwareItems,
+} from "@/lib/hardware-table";
+import { Hardware, HardwareSortConfig } from "@/types/hardware";
 import { HardwareDetailModal } from "./HardwareDetailModal";
 import { AddHardwareModal } from "./AddHardwareModal";
 import { AnimatePresence } from "framer-motion";
@@ -39,14 +46,10 @@ export const HardwareDirectory: React.FC = () => {
   );
   const [currentPage, setCurrentPage] = useState(1);
   const [filterType, setFilterType] = useState("All");
-  const [sortConfig, setSortConfig] = useState<{
-    key: keyof Hardware | null;
-    direction: "asc" | "desc" | null;
-  }>({
+  const [sortConfig, setSortConfig] = useState<HardwareSortConfig>({
     key: null,
     direction: null,
   });
-  const ITEMS_PER_PAGE = 15;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadHardware = useCallback(async () => {
@@ -109,48 +112,25 @@ export const HardwareDirectory: React.FC = () => {
     }
   };
 
-  const filteredItems = hardwareItems.filter((item) => {
-    const matchesSearch =
-      item.ckt_item_number?.toUpperCase().includes(searchTerm.toUpperCase()) ||
-      item.model_number?.toUpperCase().includes(searchTerm.toUpperCase()) ||
-      item.hardware_type?.toUpperCase().includes(searchTerm.toUpperCase()) ||
-      item.manufacturer?.toUpperCase().includes(searchTerm.toUpperCase());
-
-    const matchesType =
-      filterType === "All" || item.hardware_type === filterType;
-
-    return matchesSearch && matchesType;
-  });
+  const filteredItems = filterHardwareItems(
+    hardwareItems,
+    searchTerm,
+    filterType,
+  );
 
   const sortedItems = React.useMemo(() => {
-    if (!sortConfig.key || !sortConfig.direction) return filteredItems;
-
-    return [...filteredItems].sort((a, b) => {
-      const aValue = a[sortConfig.key!] ?? "";
-      const bValue = b[sortConfig.key!] ?? "";
-
-      if (aValue < bValue) return sortConfig.direction === "asc" ? -1 : 1;
-      if (aValue > bValue) return sortConfig.direction === "asc" ? 1 : -1;
-      return 0;
-    });
+    return sortHardwareItems(filteredItems, sortConfig);
   }, [filteredItems, sortConfig]);
 
-  const totalPages = Math.ceil(sortedItems.length / ITEMS_PER_PAGE);
-  const paginatedItems = sortedItems.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE,
+  const totalPages = Math.ceil(sortedItems.length / HARDWARE_ITEMS_PER_PAGE);
+  const paginatedItems = paginateHardwareItems(
+    sortedItems,
+    currentPage,
+    HARDWARE_ITEMS_PER_PAGE,
   );
 
   const handleSort = (key: keyof Hardware) => {
-    setSortConfig((prev) => {
-      if (prev.key === key && prev.direction === "asc") {
-        return { key, direction: "desc" };
-      } else if (prev.key === key && prev.direction === "desc") {
-        return { key: null, direction: null };
-      } else {
-        return { key, direction: "asc" };
-      }
-    });
+    setSortConfig((prev) => getNextSortConfig(prev, key));
   };
 
   const renderSortIcon = (key: keyof Hardware) => {
@@ -186,7 +166,7 @@ export const HardwareDirectory: React.FC = () => {
       const remainingVisibleItems = sortedItems.length - 1;
       const nextTotalPages = Math.max(
         1,
-        Math.ceil(remainingVisibleItems / ITEMS_PER_PAGE),
+        Math.ceil(remainingVisibleItems / HARDWARE_ITEMS_PER_PAGE),
       );
       if (currentPage > nextTotalPages) {
         setCurrentPage(nextTotalPages);
@@ -442,10 +422,15 @@ export const HardwareDirectory: React.FC = () => {
           <p>
             Showing{" "}
             {Math.min(
-              (currentPage - 1) * ITEMS_PER_PAGE + 1,
+              (currentPage - 1) * HARDWARE_ITEMS_PER_PAGE + 1,
               filteredItems.length,
             )}{" "}
-            to {Math.min(currentPage * ITEMS_PER_PAGE, filteredItems.length)} of{" "}
+            to{" "}
+            {Math.min(
+              currentPage * HARDWARE_ITEMS_PER_PAGE,
+              filteredItems.length,
+            )}{" "}
+            of{" "}
             {filteredItems.length} entries
           </p>
           <div className="flex items-center gap-2">
