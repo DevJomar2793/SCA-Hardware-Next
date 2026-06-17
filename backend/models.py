@@ -51,7 +51,7 @@ class EmployeeDetails(Base):
     employee_digit_code = Column(String, unique=True, index=True)
     first_name = Column(String, nullable=False)
     last_name = Column(String, nullable=False)
-    contact_number = Column(Integer, nullable=True)
+    contact_number = Column(String, nullable=True)
     position = Column(String, nullable=True)
     department = Column(String, nullable=True)
     date_hired = Column(String, nullable=True)

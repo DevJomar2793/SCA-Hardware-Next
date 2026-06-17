@@ -67,3 +67,48 @@ class Hardware(HardwareBase):
 
     class Config:
         from_attributes = True
+
+
+class EmployeeBase(BaseModel):
+    employee_digit_code: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    contact_number: Optional[str] = None
+    position: Optional[str] = None
+    department: Optional[str] = None
+    date_hired: Optional[str] = None
+    status: Optional[str] = None
+    notes: Optional[str] = None
+
+    @field_validator("contact_number", mode="before")
+    @classmethod
+    def parse_contact_number(cls, value):
+        if value in (None, ""):
+            return None
+        return str(value)
+
+
+class EmployeeCreate(EmployeeBase):
+    employee_digit_code: str
+    first_name: str
+    last_name: str
+
+
+class EmployeeUpdate(BaseModel):
+    employee_digit_code: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    contact_number: Optional[str] = None
+    position: Optional[str] = None
+    department: Optional[str] = None
+    date_hired: Optional[str] = None
+    status: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class EmployeeDetails(EmployeeBase):
+    id: int
+    date_created: Optional[str] = None
+
+    class Config:
+        from_attributes = True
