@@ -14,11 +14,7 @@ import {
   Pencil,
   Trash2,
 } from "lucide-react";
-import {
-  deleteHardware,
-  fetchHardwareList,
-  importExcel,
-} from "@/services/api";
+import { deleteHardware, fetchHardwareList, importExcel } from "@/services/api";
 import { HARDWARE_ITEMS_PER_PAGE } from "@/constants/hardware";
 import {
   filterHardwareItems,
@@ -281,7 +277,7 @@ export const HardwareDirectory: React.FC = () => {
                 onChange={(e) => setFilterType(e.target.value)}
                 className="px-3 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors outline-none focus:ring-2 focus:ring-purple-500/20"
               >
-                <option value="All">All Hardware Types</option>
+                <option value="All">ALL HARDWARE TYPES</option>
                 {[...new Set(hardwareItems.map((item) => item.hardware_type))]
                   .sort()
                   .map((type) => (
@@ -440,8 +436,7 @@ export const HardwareDirectory: React.FC = () => {
               currentPage * HARDWARE_ITEMS_PER_PAGE,
               filteredItems.length,
             )}{" "}
-            of{" "}
-            {filteredItems.length} entries
+            of {filteredItems.length} entries
           </p>
           <div className="flex items-center gap-2">
             <button
