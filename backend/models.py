@@ -29,7 +29,6 @@ class Hardware(Base):
     date_of_arrival = Column(String, nullable=True)
     new_or_used = Column(String)
     date_created = Column(String, default=lambda: datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-    
     image_objects = relationship("HardwareImage", back_populates="hardware", cascade="all, delete-orphan")
 
     @property
@@ -44,4 +43,21 @@ class HardwareImage(Base):
     image_path = Column(String, nullable=False)
 
     hardware = relationship("Hardware", back_populates="image_objects")
+
+class EmployeeDetails(Base):
+    __tablename__ = "employee_details"
+
+    id = Column(Integer, primary_key=True, index=True)
+    employee_digit_code = Column(String, unique=True, index=True)
+    first_name = Column(String, nullable=False)
+    last_name = Column(String, nullable=False)
+    contact_number = Column(Integer, nullable=True)
+    position = Column(String, nullable=True)
+    department = Column(String, nullable=True)
+    date_hired = Column(String, nullable=True)
+    status = Column(String, nullable=True)
+    notes = Column(String, nullable=True)
+    date_created = Column(String, default=lambda: datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    
+    
  
