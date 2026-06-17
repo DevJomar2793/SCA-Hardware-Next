@@ -24,7 +24,7 @@ type EmployeeTableRow = {
 const employeeRows: EmployeeTableRow[] = [
   {
     id: 1,
-    employee_digit_code: "EMP-1001",
+    employee_digit_code: "IT-MRS-24",
     first_name: "Maria",
     last_name: "Santos",
     contact_number: "0917 245 8891",
@@ -35,7 +35,7 @@ const employeeRows: EmployeeTableRow[] = [
   },
   {
     id: 2,
-    employee_digit_code: "EMP-1002",
+    employee_digit_code: "OPS-JC-18",
     first_name: "Jomar",
     last_name: "Cerrado",
     contact_number: "0928 716 4302",
@@ -46,7 +46,7 @@ const employeeRows: EmployeeTableRow[] = [
   },
   {
     id: 3,
-    employee_digit_code: "EMP-1003",
+    employee_digit_code: "ADM-AR-07",
     first_name: "Angela",
     last_name: "Reyes",
     contact_number: "0995 104 7720",
@@ -57,7 +57,7 @@ const employeeRows: EmployeeTableRow[] = [
   },
   {
     id: 4,
-    employee_digit_code: "EMP-1004",
+    employee_digit_code: "FIN-MDC-21",
     first_name: "Mark",
     last_name: "Dela Cruz",
     contact_number: "0906 318 5574",
@@ -68,7 +68,7 @@ const employeeRows: EmployeeTableRow[] = [
   },
   {
     id: 5,
-    employee_digit_code: "EMP-1005",
+    employee_digit_code: "PRC-NG-16",
     first_name: "Nicole",
     last_name: "Garcia",
     contact_number: "0918 642 0935",
