@@ -12,6 +12,7 @@ EMPLOYEE_DETAILS_COLUMNS = {
 }
 
 TEXT_TYPE_MARKERS = ("CHAR", "CLOB", "STRING", "TEXT", "VARCHAR")
+INTEGER_TYPE_MARKERS = ("INT",)
 
 
 def sync_employee_details_schema(engine: Engine) -> None:
@@ -59,6 +60,122 @@ def sync_employee_details_schema(engine: Engine) -> None:
                     "ON employee_details (employee_digit_code)"
                 )
             )
+
+
+def sync_hardware_schema(engine: Engine) -> None:
+    inspector = inspect(engine)
+    if engine.dialect.name != "sqlite" or "hardware_table" not in inspector.get_table_names():
+        return
+
+    existing_columns = {
+        column["name"]: column for column in inspector.get_columns("hardware_table")
+    }
+    if "date_tested" not in existing_columns:
+        with engine.begin() as connection:
+            connection.execute(text("ALTER TABLE hardware_table ADD COLUMN date_tested VARCHAR"))
+        inspector.clear_cache()
+        existing_columns = {
+            column["name"]: column for column in inspector.get_columns("hardware_table")
+        }
+
+    if not (
+        any(
+            _needs_integer_column_rebuild(existing_columns, column_name)
+            for column_name in ("screen_size", "ram")
+        )
+        or _needs_text_column_rebuild(existing_columns, "hd_storage")
+    ):
+        return
+
+    _rebuild_hardware_for_integer_specs(engine)
+
+
+def _needs_integer_column_rebuild(columns: dict, column_name: str) -> bool:
+    column = columns.get(column_name)
+    if column is None:
+        return False
+
+    column_type = str(column["type"]).upper()
+    return not any(marker in column_type for marker in INTEGER_TYPE_MARKERS)
+
+
+def _needs_text_column_rebuild(columns: dict, column_name: str) -> bool:
+    column = columns.get(column_name)
+    if column is None:
+        return False
+
+    column_type = str(column["type"]).upper()
+    return not any(marker in column_type for marker in TEXT_TYPE_MARKERS)
+
+
+def _rebuild_hardware_for_integer_specs(engine: Engine) -> None:
+    with engine.begin() as connection:
+        connection.execute(text("DROP TABLE IF EXISTS hardware_table_new"))
+        connection.execute(
+            text(
+                "CREATE TABLE hardware_table_new ("
+                "id INTEGER NOT NULL PRIMARY KEY, "
+                "ckt_item_number VARCHAR, "
+                "hardware_type VARCHAR, "
+                "notes VARCHAR, "
+                "date_tested VARCHAR, "
+                "qty INTEGER, "
+                "manufacturer VARCHAR, "
+                "warranty VARCHAR, "
+                "model_number VARCHAR, "
+                "serial_number VARCHAR, "
+                "screen_size INTEGER, "
+                "processor_type VARCHAR, "
+                "processor_speed VARCHAR, "
+                "operating_system VARCHAR, "
+                "ram INTEGER, "
+                "hd_type VARCHAR, "
+                "hd_storage VARCHAR, "
+                "operational VARCHAR, "
+                "price_dollar FLOAT, "
+                "price_peso FLOAT, "
+                "date_of_arrival VARCHAR, "
+                "new_or_used VARCHAR, "
+                "date_created VARCHAR"
+                ")"
+            )
+        )
+        connection.execute(
+            text(
+                "INSERT INTO hardware_table_new ("
+                "id, ckt_item_number, hardware_type, notes, date_tested, qty, "
+                "manufacturer, warranty, model_number, serial_number, screen_size, "
+                "processor_type, processor_speed, operating_system, ram, hd_type, "
+                "hd_storage, operational, price_dollar, price_peso, date_of_arrival, "
+                "new_or_used, date_created"
+                ") "
+                "SELECT "
+                "id, ckt_item_number, hardware_type, notes, date_tested, qty, "
+                "manufacturer, warranty, model_number, serial_number, "
+                "CAST(NULLIF(screen_size, '') AS INTEGER), processor_type, "
+                "processor_speed, operating_system, CAST(NULLIF(ram, '') AS INTEGER), "
+                "hd_type, CAST(hd_storage AS TEXT), operational, price_dollar, price_peso, "
+                "date_of_arrival, new_or_used, date_created "
+                "FROM hardware_table"
+            )
+        )
+        connection.execute(text("DROP TABLE hardware_table"))
+        connection.execute(text("ALTER TABLE hardware_table_new RENAME TO hardware_table"))
+        connection.execute(
+            text("CREATE INDEX IF NOT EXISTS ix_hardware_table_id ON hardware_table (id)")
+        )
+        connection.execute(
+            text(
+                "CREATE INDEX IF NOT EXISTS ix_hardware_table_ckt_item_number "
+                "ON hardware_table (ckt_item_number)"
+            )
+        )
+        connection.execute(
+            text(
+                "CREATE UNIQUE INDEX IF NOT EXISTS ix_hardware_table_serial_number "
+                "ON hardware_table (serial_number)"
+            )
+        )
 
 
 def _needs_contact_number_rebuild(columns: dict) -> bool:

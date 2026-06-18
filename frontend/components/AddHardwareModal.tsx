@@ -33,8 +33,8 @@ const getInitialFormData = (hardware?: Hardware) => ({
   model_number: hardware?.model_number ?? "",
   serial_number: hardware?.serial_number ?? "",
   qty: hardware?.qty ?? 1,
-  operational: hardware?.operational ?? "Operational",
-  new_or_used: hardware?.new_or_used ?? "New",
+  operational: hardware?.operational ?? "",
+  new_or_used: hardware?.new_or_used ?? "",
   processor_type: hardware?.processor_type ?? "",
   processor_speed: hardware?.processor_speed ?? "",
   ram: hardware?.ram ?? "",
@@ -50,10 +50,96 @@ const getInitialFormData = (hardware?: Hardware) => ({
     hardware?.price_peso === null || hardware?.price_peso === undefined
       ? ""
       : String(hardware.price_peso),
+  date_tested: hardware?.date_tested ?? "",
   date_of_arrival: hardware?.date_of_arrival ?? "",
   warranty: hardware?.warranty ?? "",
   notes: hardware?.notes ?? "",
 });
+
+const HARDWARE_TYPES_WITH_REQUIRED_SPECS = new Set([
+  "LAPTOP",
+  "DESKTOP",
+  "TABLET",
+  "CELLPHONE",
+]);
+
+const BASE_REQUIRED_FIELDS = [
+  "manufacturer",
+  "model_number",
+  "serial_number",
+  "operational",
+  "new_or_used",
+  "warranty",
+] as const;
+
+const SPEC_REQUIRED_FIELDS = [
+  "processor_type",
+  "processor_speed",
+  "operational",
+  "new_or_used",
+  "manufacturer",
+  "ram",
+  "hd_type",
+  "hd_storage",
+  "operating_system",
+  "warranty",
+  "model_number",
+  "serial_number",
+  "date_tested",
+  "date_of_arrival",
+] as const;
+
+type RequiredHardwareField = (typeof SPEC_REQUIRED_FIELDS)[number];
+
+const FIELD_LABELS: Record<string, string> = {
+  processor_type: "Processor",
+  processor_speed: "Speed",
+  operational: "Operational Status",
+  new_or_used: "Condition",
+  manufacturer: "Manufacturer",
+  ram: "RAM",
+  hd_type: "Storage Type",
+  hd_storage: "Storage Capacity",
+  operating_system: "OS",
+  warranty: "Warranty",
+  model_number: "Model Number",
+  serial_number: "Serial Number",
+  date_tested: "Date Tested",
+  date_of_arrival: "Arrival Date",
+};
+
+const parseOptionalInteger = (value: string | number | null | undefined) => {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+
+  const match = String(value).match(/\d+(?:\.\d+)?/);
+  const parsed = match ? Number(match[0]) : Number.NaN;
+  return Number.isFinite(parsed) ? Math.trunc(parsed) : null;
+};
+
+const getRequiredFields = (hardwareType: string): readonly RequiredHardwareField[] =>
+  !hardwareType
+    ? []
+    : HARDWARE_TYPES_WITH_REQUIRED_SPECS.has(hardwareType)
+    ? SPEC_REQUIRED_FIELDS
+    : BASE_REQUIRED_FIELDS;
+
+const isMissingValue = (value: unknown) =>
+  value === null ||
+  value === undefined ||
+  (typeof value === "string" && value.trim() === "");
+
+const RequiredIndicator = ({ isSelect = false }: { isSelect?: boolean }) => (
+  <span
+    aria-hidden="true"
+    className={`pointer-events-none absolute top-1/2 -translate-y-1/2 text-base font-bold text-red-500 ${
+      isSelect ? "right-8" : "right-3"
+    }`}
+  >
+    *
+  </span>
+);
 
 export const AddHardwareModal: React.FC<AddHardwareModalProps> = ({
   hardware,
@@ -95,6 +181,10 @@ export const AddHardwareModal: React.FC<AddHardwareModalProps> = ({
   }, []);
 
   const [formData, setFormData] = useState(() => getInitialFormData(hardware));
+  const requiredFields = getRequiredFields(formData.hardware_type);
+  const showRequiredIndicators = Boolean(formData.hardware_type);
+  const isFieldRequired = (fieldName: RequiredHardwareField) =>
+    requiredFields.includes(fieldName);
 
   const loadNextCktNumber = async (hardwareType: string) => {
     const requestId = cktRequestId.current + 1;
@@ -241,8 +331,22 @@ export const AddHardwareModal: React.FC<AddHardwareModalProps> = ({
         throw new Error("Please select a valid hardware type first.");
       }
 
+      const missingFields = requiredFields.filter((fieldName) =>
+        isMissingValue(formData[fieldName]),
+      );
+
+      if (missingFields.length > 0) {
+        throw new Error(
+          `Please fill in required fields: ${missingFields
+            .map((fieldName) => FIELD_LABELS[fieldName])
+            .join(", ")}.`,
+        );
+      }
+
       const payload: AddHardwarePayload = {
         ...formData,
+        ram: parseOptionalInteger(formData.ram),
+        screen_size: parseOptionalInteger(formData.screen_size),
         price_dollar: formData.price_dollar
           ? parseFloat(formData.price_dollar)
           : null,
@@ -274,11 +378,16 @@ export const AddHardwareModal: React.FC<AddHardwareModalProps> = ({
       });
       onClose();
     } catch (err) {
-      setError(
+      const message =
         err instanceof Error
           ? err.message
-          : `Failed to ${isEditMode ? "update" : "add"} hardware`,
-      );
+          : `Failed to ${isEditMode ? "update" : "add"} hardware`;
+      setError(message);
+      void Swal.fire({
+        title: isEditMode ? "Unable to save changes" : "Unable to add hardware",
+        text: message,
+        icon: "error",
+      });
     } finally {
       setIsSubmitting(false);
       setUploadStatus("idle");
@@ -315,7 +424,7 @@ export const AddHardwareModal: React.FC<AddHardwareModalProps> = ({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto">
+        <form onSubmit={handleSubmit} noValidate className="p-6 overflow-y-auto">
           {error && (
             <div className="mb-6 p-4 bg-red-50 border border-red-200 text-gray-600 rounded-lg text-sm">
               {error}
@@ -350,69 +459,84 @@ export const AddHardwareModal: React.FC<AddHardwareModalProps> = ({
                   <label className="block text-xs font-medium text-slate-500 mb-1">
                     Hardware Type
                   </label>
-                  <select
-                    required
-                    name="hardware_type"
-                    value={formData.hardware_type}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none"
-                  >
-                    <option value="">Select hardware type</option>
-                    {HARDWARE_TYPE_OPTIONS.map((hardwareType) => (
-                      <option key={hardwareType} value={hardwareType}>
-                        {hardwareType}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="relative">
+                    <select
+                      required
+                      name="hardware_type"
+                      value={formData.hardware_type}
+                      onChange={handleChange}
+                      className="w-full px-3 py-2 pr-9 border border-gray-200 text-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none"
+                    >
+                      <option value="">Select hardware type</option>
+                      {HARDWARE_TYPE_OPTIONS.map((hardwareType) => (
+                        <option key={hardwareType} value={hardwareType}>
+                          {hardwareType}
+                        </option>
+                      ))}
+                    </select>
+                    {showRequiredIndicators && <RequiredIndicator isSelect />}
+                  </div>
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-slate-500 mb-1">
                     Manufacturer
                   </label>
-                  <input
-                    required
-                    name="manufacturer"
-                    value={formData.manufacturer}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none"
-                  />
+                  <div className="relative">
+                    <input
+                      required={isFieldRequired("manufacturer")}
+                      name="manufacturer"
+                      value={formData.manufacturer}
+                      onChange={handleChange}
+                      className="w-full px-3 py-2 pr-8 border border-gray-200 text-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none"
+                    />
+                    {isFieldRequired("manufacturer") && <RequiredIndicator />}
+                  </div>
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-slate-500 mb-1">
                     Model Number
                   </label>
-                  <input
-                    required
-                    name="model_number"
-                    value={formData.model_number}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none"
-                  />
+                  <div className="relative">
+                    <input
+                      required={isFieldRequired("model_number")}
+                      name="model_number"
+                      value={formData.model_number}
+                      onChange={handleChange}
+                      className="w-full px-3 py-2 pr-8 border border-gray-200 text-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none"
+                    />
+                    {isFieldRequired("model_number") && <RequiredIndicator />}
+                  </div>
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-slate-500 mb-1">
                     Serial Number
                   </label>
-                  <input
-                    required
-                    name="serial_number"
-                    value={formData.serial_number}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none"
-                  />
+                  <div className="relative">
+                    <input
+                      required={isFieldRequired("serial_number")}
+                      name="serial_number"
+                      value={formData.serial_number}
+                      onChange={handleChange}
+                      className="w-full px-3 py-2 pr-8 border border-gray-200 text-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none"
+                    />
+                    {isFieldRequired("serial_number") && <RequiredIndicator />}
+                  </div>
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-slate-500 mb-1">
                     Quantity
                   </label>
-                  <input
-                    required
-                    type="number"
-                    name="qty"
-                    value={formData.qty}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none"
-                  />
+                  <div className="relative">
+                    <input
+                      required
+                      type="number"
+                      name="qty"
+                      value={formData.qty}
+                      onChange={handleChange}
+                      className="w-full px-3 py-2 pr-9 border border-gray-200 text-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none"
+                    />
+                    {showRequiredIndicators && <RequiredIndicator isSelect />}
+                  </div>
                 </div>
               </div>
             </section>
@@ -426,62 +550,88 @@ export const AddHardwareModal: React.FC<AddHardwareModalProps> = ({
                   <label className="block text-xs font-medium text-slate-500 mb-1">
                     Processor
                   </label>
-                  <input
-                    name="processor_type"
-                    value={formData.processor_type}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none"
-                  />
+                  <div className="relative">
+                    <input
+                      required={isFieldRequired("processor_type")}
+                      name="processor_type"
+                      value={formData.processor_type}
+                      onChange={handleChange}
+                      className="w-full px-3 py-2 pr-8 border border-gray-200 text-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none"
+                    />
+                    {isFieldRequired("processor_type") && <RequiredIndicator />}
+                  </div>
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-slate-500 mb-1">
                     Speed
                   </label>
-                  <input
-                    name="processor_speed"
-                    value={formData.processor_speed}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none"
-                  />
+                  <div className="relative">
+                    <input
+                      required={isFieldRequired("processor_speed")}
+                      name="processor_speed"
+                      value={formData.processor_speed}
+                      onChange={handleChange}
+                      className="w-full px-3 py-2 pr-8 border border-gray-200 text-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none"
+                    />
+                    {isFieldRequired("processor_speed") && <RequiredIndicator />}
+                  </div>
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-slate-500 mb-1">
                     RAM
                   </label>
-                  <input
-                    name="ram"
-                    value={formData.ram}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none"
-                  />
+                  <div className="relative">
+                    <input
+                      required={isFieldRequired("ram")}
+                      type="number"
+                      min="0"
+                      step="1"
+                      name="ram"
+                      value={formData.ram}
+                      onChange={handleChange}
+                      className="w-full px-3 py-2 pr-9 border border-gray-200 text-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none"
+                    />
+                    {isFieldRequired("ram") && <RequiredIndicator isSelect />}
+                  </div>
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-slate-500 mb-1">
                     Storage Type
                   </label>
-                  <input
-                    name="hd_type"
-                    value={formData.hd_type}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none"
-                  />
+                  <div className="relative">
+                    <input
+                      required={isFieldRequired("hd_type")}
+                      name="hd_type"
+                      value={formData.hd_type}
+                      onChange={handleChange}
+                      className="w-full px-3 py-2 pr-8 border border-gray-200 text-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none"
+                    />
+                    {isFieldRequired("hd_type") && <RequiredIndicator />}
+                  </div>
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-slate-500 mb-1">
                     Storage Capacity
                   </label>
-                  <input
-                    name="hd_storage"
-                    value={formData.hd_storage}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none"
-                  />
+                  <div className="relative">
+                    <input
+                      required={isFieldRequired("hd_storage")}
+                      name="hd_storage"
+                      value={formData.hd_storage}
+                      onChange={handleChange}
+                      className="w-full px-3 py-2 pr-8 border border-gray-200 text-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none"
+                    />
+                    {isFieldRequired("hd_storage") && <RequiredIndicator />}
+                  </div>
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-slate-500 mb-1">
                     Screen Size
                   </label>
                   <input
+                    type="number"
+                    min="0"
+                    step="1"
                     name="screen_size"
                     value={formData.screen_size}
                     onChange={handleChange}
@@ -492,12 +642,18 @@ export const AddHardwareModal: React.FC<AddHardwareModalProps> = ({
                   <label className="block text-xs font-medium text-slate-500 mb-1">
                     OS
                   </label>
-                  <input
-                    name="operating_system"
-                    value={formData.operating_system}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none"
-                  />
+                  <div className="relative">
+                    <input
+                      required={isFieldRequired("operating_system")}
+                      name="operating_system"
+                      value={formData.operating_system}
+                      onChange={handleChange}
+                      className="w-full px-3 py-2 pr-8 border border-gray-200 text-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none"
+                    />
+                    {isFieldRequired("operating_system") && (
+                      <RequiredIndicator />
+                    )}
+                  </div>
                 </div>
               </div>
             </section>
@@ -511,43 +667,81 @@ export const AddHardwareModal: React.FC<AddHardwareModalProps> = ({
                   <label className="block text-xs font-medium text-slate-500 mb-1">
                     Operational Status
                   </label>
-                  <select
-                    name="operational"
-                    value={formData.operational}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none"
-                  >
-                    <option value="Operational">Operational</option>
-                    <option value="Non-Operational">Non-Operational</option>
-                    <option value="Under Repair">Under Repair</option>
-                  </select>
+                  <div className="relative">
+                    <select
+                      required={isFieldRequired("operational")}
+                      name="operational"
+                      value={formData.operational}
+                      onChange={handleChange}
+                      className="w-full px-3 py-2 pr-9 border border-gray-200 text-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none"
+                    >
+                      <option value="">Select status</option>
+                      <option value="Operational">Operational</option>
+                      <option value="Non-Operational">Non-Operational</option>
+                      <option value="Under Repair">Under Repair</option>
+                    </select>
+                    {isFieldRequired("operational") && (
+                      <RequiredIndicator isSelect />
+                    )}
+                  </div>
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-slate-500 mb-1">
                     Condition
                   </label>
-                  <select
-                    name="new_or_used"
-                    value={formData.new_or_used}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none"
-                  >
-                    <option value="New">New</option>
-                    <option value="Used">Used</option>
-                    <option value="Refurbished">Refurbished</option>
-                  </select>
+                  <div className="relative">
+                    <select
+                      required={isFieldRequired("new_or_used")}
+                      name="new_or_used"
+                      value={formData.new_or_used}
+                      onChange={handleChange}
+                      className="w-full px-3 py-2 pr-9 border border-gray-200 text-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none"
+                    >
+                      <option value="">Select condition</option>
+                      <option value="New">New</option>
+                      <option value="Used">Used</option>
+                      <option value="Refurbished">Refurbished</option>
+                    </select>
+                    {isFieldRequired("new_or_used") && (
+                      <RequiredIndicator isSelect />
+                    )}
+                  </div>
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-slate-500 mb-1">
                     Arrival Date
                   </label>
-                  <input
-                    type="date"
-                    name="date_of_arrival"
-                    value={formData.date_of_arrival}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none"
-                  />
+                  <div className="relative">
+                    <input
+                      required={isFieldRequired("date_of_arrival")}
+                      type="date"
+                      name="date_of_arrival"
+                      value={formData.date_of_arrival}
+                      onChange={handleChange}
+                      className="w-full px-3 py-2 pr-9 border border-gray-200 text-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none"
+                    />
+                    {isFieldRequired("date_of_arrival") && (
+                      <RequiredIndicator isSelect />
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-500 mb-1">
+                    Date Tested
+                  </label>
+                  <div className="relative">
+                    <input
+                      required={isFieldRequired("date_tested")}
+                      type="date"
+                      name="date_tested"
+                      value={formData.date_tested}
+                      onChange={handleChange}
+                      className="w-full px-3 py-2 pr-9 border border-gray-200 text-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none"
+                    />
+                    {isFieldRequired("date_tested") && (
+                      <RequiredIndicator isSelect />
+                    )}
+                  </div>
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-slate-500 mb-1">
@@ -579,12 +773,16 @@ export const AddHardwareModal: React.FC<AddHardwareModalProps> = ({
                   <label className="block text-xs font-medium text-slate-500 mb-1">
                     Warranty
                   </label>
-                  <input
-                    name="warranty"
-                    value={formData.warranty}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none"
-                  />
+                  <div className="relative">
+                    <input
+                      required={isFieldRequired("warranty")}
+                      name="warranty"
+                      value={formData.warranty}
+                      onChange={handleChange}
+                      className="w-full px-3 py-2 pr-8 border border-gray-200 text-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none"
+                    />
+                    {isFieldRequired("warranty") && <RequiredIndicator />}
+                  </div>
                 </div>
               </div>
             </section>

@@ -349,6 +349,14 @@ export const HardwareDirectory: React.FC = () => {
                   </th>
                   <th
                     className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer hover:text-purple-600 transition-colors"
+                    onClick={() => handleSort("date_tested")}
+                  >
+                    <div className="flex items-center">
+                      Date Tested {renderSortIcon("date_tested")}
+                    </div>
+                  </th>
+                  <th
+                    className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer hover:text-purple-600 transition-colors"
                     onClick={() => handleSort("date_created")}
                   >
                     <div className="flex items-center">
@@ -382,6 +390,9 @@ export const HardwareDirectory: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-600">
                       {item.model_number}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-slate-600">
+                      {item.date_tested || "—"}
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-600">
                       {item.date_created}

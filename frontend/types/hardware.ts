@@ -9,11 +9,11 @@ export interface Hardware {
   warranty: string | null;
   model_number: string;
   serial_number: string;
-  screen_size: string | null;
+  screen_size: number | null;
   processor_type: string | null;
   processor_speed: string | null;
   operating_system: string | null;
-  ram: string | null;
+  ram: number | null;
   hd_type: string | null;
   hd_storage: string | null;
   operational: string;

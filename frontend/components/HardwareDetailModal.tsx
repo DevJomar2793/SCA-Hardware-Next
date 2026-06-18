@@ -207,7 +207,7 @@ export const HardwareDetailModal: React.FC<HardwareDetailModalProps> = ({
                 value={item.price_peso ? `₱${item.price_peso}` : null}
               />
               <DetailRow label="Arrival Date" value={item.date_of_arrival} />
-              <DetailRow label="Tested Date" value={item.date_tested} />
+              <DetailRow label="Date Tested" value={item.date_tested} />
               <DetailRow label="Created Date" value={item.date_created} />
             </DetailSection>
 

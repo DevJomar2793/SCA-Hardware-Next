@@ -6,10 +6,11 @@ import models
 from config import CORS_ORIGINS, STATIC_DIR
 from database import engine
 from routers import employees, hardware, images, imports
-from schema_sync import sync_employee_details_schema
+from schema_sync import sync_employee_details_schema, sync_hardware_schema
 
 
 models.Base.metadata.create_all(bind=engine)
+sync_hardware_schema(engine)
 sync_employee_details_schema(engine)
 
 app = FastAPI(title="Hardware Management API")

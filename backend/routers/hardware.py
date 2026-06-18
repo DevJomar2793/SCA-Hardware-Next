@@ -15,6 +15,10 @@ router = APIRouter(prefix="/api/v1", tags=["hardware"])
 @router.post("/add-hardware", response_model=schemas.Hardware, status_code=201)
 def create_hardware(hardware: schemas.HardwareCreate, db: Session = Depends(get_db)):
     hardware_data = hardware.dict()
+    validation_error = schemas.missing_required_hardware_message(hardware_data)
+    if validation_error:
+        raise HTTPException(status_code=422, detail=validation_error)
+
     hardware_data["ckt_item_number"] = generate_next_ckt_number(
         hardware_data.get("hardware_type"),
         db,
@@ -61,6 +65,16 @@ def update_hardware(
         raise HTTPException(status_code=404, detail="Hardware not found")
 
     update_data = hardware_update.dict(exclude_unset=True)
+    merged_data = {
+        field: getattr(db_hardware, field)
+        for field in schemas.HARDWARE_VALIDATION_FIELDS
+    }
+    merged_data.update(update_data)
+
+    validation_error = schemas.missing_required_hardware_message(merged_data)
+    if validation_error:
+        raise HTTPException(status_code=422, detail=validation_error)
+
     for key, value in update_data.items():
         setattr(db_hardware, key, value)
 
