@@ -3,6 +3,7 @@ import {
   Hardware,
   UpdateHardwarePayload,
 } from "@/types/hardware";
+import { EmployeeDetails } from "@/types/employee";
 
 export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000";
@@ -18,6 +19,13 @@ async function assertOk(response: Response): Promise<void> {
 
 export async function fetchHardwareList(): Promise<Hardware[]> {
   const response = await fetch(`${API_BASE_URL}/api/v1/hardware-list`);
+  await assertOk(response);
+
+  return response.json();
+}
+
+export async function fetchEmployeeList(): Promise<EmployeeDetails[]> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/employee-list`);
   await assertOk(response);
 
   return response.json();
@@ -128,4 +136,4 @@ export async function uploadHardwareImages(
   return data.uploaded_files;
 }
 
-export type { Hardware };
+export type { EmployeeDetails, Hardware };
