@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   Search,
   Filter,
@@ -14,7 +14,7 @@ import {
   Pencil,
   Trash2,
 } from "lucide-react";
-import { deleteHardware, fetchHardwareList, importExcel } from "@/services/api";
+import { deleteHardware, importExcel } from "@/services/api";
 import { HARDWARE_ITEMS_PER_PAGE } from "@/constants/hardware";
 import {
   filterHardwareItems,
@@ -29,13 +29,26 @@ import { AnimatePresence } from "framer-motion";
 import { useRef } from "react";
 import Swal from "sweetalert2";
 
-export const HardwareDirectory: React.FC = () => {
-  const [hardwareItems, setHardwareItems] = useState<Hardware[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+interface HardwareDirectoryProps {
+  hardwareItems: Hardware[];
+  isLoading: boolean;
+  error: string | null;
+  onErrorChange: React.Dispatch<React.SetStateAction<string | null>>;
+  onHardwareItemsChange: React.Dispatch<React.SetStateAction<Hardware[]>>;
+  onReload: () => Promise<void>;
+}
+
+export const HardwareDirectory: React.FC<HardwareDirectoryProps> = ({
+  hardwareItems,
+  isLoading,
+  error,
+  onErrorChange,
+  onHardwareItemsChange,
+  onReload,
+}) => {
   const [isImporting, setIsImporting] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Hardware | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedItem, setSelectedItem] = useState<Hardware | null>(null);
   const [deletingHardwareId, setDeletingHardwareId] = useState<number | null>(
@@ -49,40 +62,16 @@ export const HardwareDirectory: React.FC = () => {
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const loadHardware = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      const data = await fetchHardwareList();
-      console.log(`Fetched ${data.length} hardware items from API`);
-      setHardwareItems(data);
-    } catch (err) {
-      console.error("Failed to fetch hardware:", err);
-      setError(
-        err instanceof Error ? err.message : "An unexpected error occurred",
-      );
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      void loadHardware();
-    }, 0);
-
-    return () => window.clearTimeout(timer);
-  }, [loadHardware]);
-
   const handleImportClick = () => {
     fileInputRef.current?.click();
   };
 
   const handleAddHardwareSuccess = async () => {
-    await loadHardware();
+    await onReload();
   };
 
   const handleEditHardwareSuccess = async () => {
-    await loadHardware();
+    await onReload();
     setEditingItem(null);
   };
 
@@ -96,16 +85,16 @@ export const HardwareDirectory: React.FC = () => {
 
     try {
       setIsImporting(true);
-      setError(null);
+      onErrorChange(null);
       const result = await importExcel(file);
       console.log("Import successful:", result);
       alert(
         `Successfully imported ${result.imported} items. ${result.skipped} items were skipped.`,
       );
-      await loadHardware();
+      await onReload();
     } catch (err) {
       console.error("Import failed:", err);
-      setError(
+      onErrorChange(
         err instanceof Error ? err.message : "Failed to import Excel file",
       );
     } finally {
@@ -162,7 +151,7 @@ export const HardwareDirectory: React.FC = () => {
     try {
       setDeletingHardwareId(item.id);
       await deleteHardware(item.id);
-      setHardwareItems((prev) =>
+      onHardwareItemsChange((prev) =>
         prev.filter((hardwareItem) => hardwareItem.id !== item.id),
       );
       const remainingVisibleItems = sortedItems.length - 1;
@@ -205,7 +194,7 @@ export const HardwareDirectory: React.FC = () => {
           </p>
           <p className="text-slate-600 mb-6 text-sm">{error}</p>
           <button
-            onClick={() => window.location.reload()}
+            onClick={() => void onReload()}
             className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors"
           >
             Retry
@@ -521,7 +510,7 @@ export const HardwareDirectory: React.FC = () => {
           <AddHardwareModal
             hardware={editingItem}
             onClose={() => setEditingItem(null)}
-            onImagesChanged={loadHardware}
+            onImagesChanged={onReload}
             onSuccess={handleEditHardwareSuccess}
           />
         )}

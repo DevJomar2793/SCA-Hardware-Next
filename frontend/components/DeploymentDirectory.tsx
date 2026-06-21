@@ -1,6 +1,5 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
 import {
   Filter,
   LayoutGrid,
@@ -10,7 +9,6 @@ import {
   Search,
   UserRound,
 } from "lucide-react";
-import { fetchEmployeeList } from "@/services/api";
 import { EmployeeDetails } from "@/types/employee";
 
 const statusStyles: Record<string, string> = {
@@ -32,34 +30,19 @@ const getFullName = (employee: EmployeeDetails) => {
   return fullName || "—";
 };
 
-export function DeploymentDirectory() {
-  const [employees, setEmployees] = useState<EmployeeDetails[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+interface DeploymentDirectoryProps {
+  employees: EmployeeDetails[];
+  isLoading: boolean;
+  error: string | null;
+  onReload: () => Promise<void>;
+}
 
-  const loadEmployees = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      const data = await fetchEmployeeList();
-      setEmployees(data);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to fetch employees",
-      );
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      void loadEmployees();
-    }, 0);
-
-    return () => window.clearTimeout(timer);
-  }, [loadEmployees]);
-
+export function DeploymentDirectory({
+  employees,
+  isLoading,
+  error,
+  onReload,
+}: DeploymentDirectoryProps) {
   return (
     <div className="flex-1 bg-sky-50 p-8 flex flex-col">
       <div className="flex flex-wrap items-center justify-between gap-4 mb-8 shrink-0">
@@ -174,7 +157,7 @@ export function DeploymentDirectory() {
                       <p className="mb-4 text-sm text-red-600">{error}</p>
                       <button
                         type="button"
-                        onClick={() => void loadEmployees()}
+                        onClick={() => void onReload()}
                         className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-red-700 ring-1 ring-inset ring-red-200 transition-colors hover:bg-red-100"
                       >
                         Retry
