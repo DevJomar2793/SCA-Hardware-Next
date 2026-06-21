@@ -48,7 +48,9 @@ export const SideNav: React.FC = () => {
       {/* Navigation Menu */}
       <nav className="flex-1 p-4 space-y-2">
         {menuItems.map((item) => {
-          const isActive = clientPathname === item.href;
+          const isActive =
+            clientPathname === item.href ||
+            (item.href !== "/" && clientPathname.startsWith(`${item.href}/`));
           return (
             <Link
               key={item.name}

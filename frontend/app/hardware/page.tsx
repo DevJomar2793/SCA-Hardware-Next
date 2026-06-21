@@ -41,7 +41,6 @@ export default function HardwarePage() {
       isLoading={isLoading}
       error={error}
       onErrorChange={setError}
-      onHardwareItemsChange={setHardwareItems}
       onReload={loadHardware}
     />
   );

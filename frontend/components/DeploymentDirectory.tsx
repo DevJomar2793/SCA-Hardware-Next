@@ -1,6 +1,10 @@
 "use client";
 
+import React, { useState } from "react";
+import Link from "next/link";
 import {
+  ChevronDown,
+  ChevronUp,
   Filter,
   LayoutGrid,
   List,
@@ -9,7 +13,17 @@ import {
   Search,
   UserRound,
 } from "lucide-react";
-import { EmployeeDetails } from "@/types/employee";
+import { AnimatePresence } from "framer-motion";
+import { AddEmployeeModal } from "./AddEmployeeModal";
+import { HARDWARE_ITEMS_PER_PAGE } from "@/constants/hardware";
+import {
+  filterEmployeeItems,
+  getEmployeeFullName,
+  getNextEmployeeSortConfig,
+  paginateEmployeeItems,
+  sortEmployeeItems,
+} from "@/lib/employee-table";
+import { EmployeeDetails, EmployeeSortConfig } from "@/types/employee";
 
 const statusStyles: Record<string, string> = {
   Active: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
@@ -21,14 +35,8 @@ const fallbackStatusStyle = "bg-slate-100 text-slate-600 ring-slate-500/20";
 
 const displayValue = (value: string | null | undefined) => value || "—";
 
-const getFullName = (employee: EmployeeDetails) => {
-  const fullName = [employee.first_name, employee.last_name]
-    .filter(Boolean)
-    .join(" ")
-    .trim();
-
-  return fullName || "—";
-};
+const getFullName = (employee: EmployeeDetails) =>
+  getEmployeeFullName(employee) || "—";
 
 interface DeploymentDirectoryProps {
   employees: EmployeeDetails[];
@@ -43,6 +51,94 @@ export function DeploymentDirectory({
   error,
   onReload,
 }: DeploymentDirectoryProps) {
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [departmentFilter, setDepartmentFilter] = useState("All");
+  const [statusFilter, setStatusFilter] = useState("All");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [sortConfig, setSortConfig] = useState<EmployeeSortConfig>({
+    key: null,
+    direction: null,
+  });
+
+  const handleAddEmployeeSuccess = async () => {
+    await onReload();
+  };
+
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    setCurrentPage(1);
+  };
+
+  const handleDepartmentFilterChange = (value: string) => {
+    setDepartmentFilter(value);
+    setCurrentPage(1);
+  };
+
+  const handleStatusFilterChange = (value: string) => {
+    setStatusFilter(value);
+    setCurrentPage(1);
+  };
+
+  const filteredEmployees = filterEmployeeItems(
+    employees,
+    searchTerm,
+    departmentFilter,
+    statusFilter,
+  );
+
+  const sortedEmployees = React.useMemo(() => {
+    return sortEmployeeItems(filteredEmployees, sortConfig);
+  }, [filteredEmployees, sortConfig]);
+
+  const totalPages = Math.ceil(sortedEmployees.length / HARDWARE_ITEMS_PER_PAGE);
+  const paginatedEmployees = paginateEmployeeItems(
+    sortedEmployees,
+    currentPage,
+    HARDWARE_ITEMS_PER_PAGE,
+  );
+
+  const departmentOptions = React.useMemo(
+    () =>
+      [
+        ...new Set(
+          employees
+            .map((employee) => employee.department)
+            .filter((department): department is string => Boolean(department)),
+        ),
+      ].sort(),
+    [employees],
+  );
+
+  const handleSort = (key: EmployeeSortConfig["key"]) => {
+    setSortConfig((prev) => getNextEmployeeSortConfig(prev, key));
+  };
+
+  const renderSortIcon = (key: EmployeeSortConfig["key"]) => {
+    if (sortConfig.key !== key) return null;
+    if (sortConfig.direction === "asc") {
+      return <ChevronUp size={14} className="ml-1" />;
+    }
+    if (sortConfig.direction === "desc") {
+      return <ChevronDown size={14} className="ml-1" />;
+    }
+    return null;
+  };
+
+  const renderSortableHeader = (
+    label: string,
+    key: EmployeeSortConfig["key"],
+  ) => (
+    <th
+      className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer hover:text-purple-600 transition-colors"
+      onClick={() => handleSort(key)}
+    >
+      <div className="flex items-center">
+        {label} {renderSortIcon(key)}
+      </div>
+    </th>
+  );
+
   return (
     <div className="flex-1 bg-sky-50 p-8 flex flex-col">
       <div className="flex flex-wrap items-center justify-between gap-4 mb-8 shrink-0">
@@ -51,6 +147,7 @@ export function DeploymentDirectory({
         </div>
         <button
           type="button"
+          onClick={() => setIsAddModalOpen(true)}
           className="bg-white text-slate-700 px-4 py-2 rounded-lg shadow-sm border border-gray-200 font-medium hover:bg-gray-50 transition-colors flex items-center gap-2"
         >
           <Plus size={18} />
@@ -68,26 +165,36 @@ export function DeploymentDirectory({
             <input
               type="text"
               placeholder="Search employees..."
+              value={searchTerm}
+              onChange={(e) => handleSearchChange(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all"
             />
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <div className="flex items-center gap-2">
               <Filter size={16} className="text-gray-400" />
-              <select className="px-3 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors outline-none focus:ring-2 focus:ring-purple-500/20">
-                <option>All Departments</option>
-                <option>IT Support</option>
-                <option>Operations</option>
-                <option>Administration</option>
-                <option>Finance</option>
-                <option>Procurement</option>
+              <select
+                value={departmentFilter}
+                onChange={(e) => handleDepartmentFilterChange(e.target.value)}
+                className="px-3 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors outline-none focus:ring-2 focus:ring-purple-500/20"
+              >
+                <option value="All">All Departments</option>
+                {departmentOptions.map((department) => (
+                  <option key={department} value={department}>
+                    {department}
+                  </option>
+                ))}
               </select>
             </div>
-            <select className="px-3 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors outline-none focus:ring-2 focus:ring-purple-500/20">
-              <option>All Status</option>
-              <option>Active</option>
-              <option>On Leave</option>
-              <option>Inactive</option>
+            <select
+              value={statusFilter}
+              onChange={(e) => handleStatusFilterChange(e.target.value)}
+              className="px-3 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors outline-none focus:ring-2 focus:ring-purple-500/20"
+            >
+              <option value="All">All Status</option>
+              <option value="Active">Active</option>
+              <option value="On Leave">On Leave</option>
+              <option value="Inactive">Inactive</option>
             </select>
             <div className="flex border border-gray-200 rounded-lg overflow-hidden">
               <button
@@ -114,27 +221,13 @@ export function DeploymentDirectory({
           <table className="w-full min-w-[960px] text-left border-collapse">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-100 sticky top-0 z-10">
-                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  Employee Code
-                </th>
-                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  Full Name
-                </th>
-                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  Contact Number
-                </th>
-                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  Position
-                </th>
-                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  Department
-                </th>
-                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  Date Hired
-                </th>
-                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
+                {renderSortableHeader("Employee Code", "employee_digit_code")}
+                {renderSortableHeader("Full Name", "full_name")}
+                {renderSortableHeader("Contact Number", "contact_number")}
+                {renderSortableHeader("Position", "position")}
+                {renderSortableHeader("Department", "department")}
+                {renderSortableHeader("Date Hired", "date_hired")}
+                {renderSortableHeader("Status", "status")}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -165,14 +258,14 @@ export function DeploymentDirectory({
                     </div>
                   </td>
                 </tr>
-              ) : employees.length === 0 ? (
+              ) : filteredEmployees.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-6 py-20 text-center text-slate-500">
                     No employees found.
                   </td>
                 </tr>
               ) : (
-                employees.map((employee) => {
+                paginatedEmployees.map((employee) => {
                   const status = employee.status || "—";
                   const statusStyle =
                     statusStyles[status] ?? fallbackStatusStyle;
@@ -183,7 +276,12 @@ export function DeploymentDirectory({
                       className="hover:bg-gray-50/50 transition-colors"
                     >
                       <td className="px-6 py-4 text-sm font-semibold text-purple-600">
-                        {displayValue(employee.employee_digit_code)}
+                        <Link
+                          href={`/deployment/${employee.id}`}
+                          className="text-purple-600 hover:text-purple-800 font-semibold hover:underline transition-colors"
+                        >
+                          {displayValue(employee.employee_digit_code)}
+                        </Link>
                       </td>
                       <td className="px-6 py-4 text-sm text-slate-700">
                         <div className="flex items-center gap-3">
@@ -224,31 +322,83 @@ export function DeploymentDirectory({
 
         <div className="p-4 border-t border-gray-100 flex flex-wrap items-center justify-between gap-3 text-sm text-gray-500 shrink-0">
           <p>
-            Showing {employees.length > 0 ? 1 : 0} to {employees.length} of{" "}
-            {employees.length} entries
+            Showing{" "}
+            {Math.min(
+              (currentPage - 1) * HARDWARE_ITEMS_PER_PAGE + 1,
+              filteredEmployees.length,
+            )}{" "}
+            to{" "}
+            {Math.min(
+              currentPage * HARDWARE_ITEMS_PER_PAGE,
+              filteredEmployees.length,
+            )}{" "}
+            of {filteredEmployees.length} entries
           </p>
           <div className="flex items-center gap-2">
             <button
               type="button"
-              className="px-3 py-1 border border-gray-200 rounded text-gray-400 cursor-default"
+              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+              className="px-3 py-1 border border-gray-200 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              disabled={currentPage === 1}
             >
               Previous
             </button>
+
+            <div className="flex gap-1">
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter((page) => {
+                  if (page === 1 || page === totalPages) return true;
+                  return Math.abs(page - currentPage) <= 1;
+                })
+                .map((page, index, array) => {
+                  const isFirstEllipsis =
+                    index > 0 && page - array[index - 1] > 1;
+                  const isLastEllipsis =
+                    index < array.length - 1 && array[index + 1] - page > 1;
+
+                  return (
+                    <React.Fragment key={page}>
+                      {isFirstEllipsis && (
+                        <span className="px-2 py-1">...</span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setCurrentPage(page)}
+                        className={`px-3 py-1 border rounded transition-colors ${
+                          currentPage === page
+                            ? "bg-purple-600 text-white border-purple-600"
+                            : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+                        }`}
+                      >
+                        {page}
+                      </button>
+                      {isLastEllipsis && <span className="px-2 py-1">...</span>}
+                    </React.Fragment>
+                  );
+                })}
+            </div>
+
             <button
               type="button"
-              className="px-3 py-1 border rounded bg-purple-600 text-white border-purple-600"
-            >
-              1
-            </button>
-            <button
-              type="button"
-              className="px-3 py-1 border border-gray-200 rounded text-gray-400 cursor-default"
+              onClick={() =>
+                setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+              }
+              className="px-3 py-1 border border-gray-200 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              disabled={currentPage === totalPages || totalPages === 0}
             >
               Next {">"}
             </button>
           </div>
         </div>
       </div>
+      <AnimatePresence>
+        {isAddModalOpen && (
+          <AddEmployeeModal
+            onClose={() => setIsAddModalOpen(false)}
+            onSuccess={handleAddEmployeeSuccess}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
