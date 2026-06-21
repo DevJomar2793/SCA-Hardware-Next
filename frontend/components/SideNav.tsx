@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -10,18 +10,28 @@ import {
   Settings,
   LogOut,
   Square,
+  RefreshCw,
 } from "lucide-react";
 
 const menuItems = [
   { name: "Overview", icon: LayoutDashboard, href: "/" },
   { name: "Hardware", icon: HardDrive, href: "/hardware" },
-  { name: "Deployment", icon: HardDrive, href: "/deployment" },
+  { name: "Deployment", icon: RefreshCw, href: "/deployment" },
   { name: "Analytics", icon: BarChart3, href: "/analytics" },
   { name: "Settings", icon: Settings, href: "/settings" },
 ];
 
 export const SideNav: React.FC = () => {
   const pathname = usePathname();
+  const [clientPathname, setClientPathname] = useState("");
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setClientPathname(pathname);
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [pathname]);
 
   return (
     <div className="w-64 bg-[#0f172a] text-slate-300 h-full flex flex-col">
@@ -38,7 +48,7 @@ export const SideNav: React.FC = () => {
       {/* Navigation Menu */}
       <nav className="flex-1 p-4 space-y-2">
         {menuItems.map((item) => {
-          const isActive = pathname === item.href;
+          const isActive = clientPathname === item.href;
           return (
             <Link
               key={item.name}

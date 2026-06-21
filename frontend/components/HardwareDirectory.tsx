@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   Search,
   Filter,
@@ -14,11 +14,7 @@ import {
   Pencil,
   Trash2,
 } from "lucide-react";
-import {
-  deleteHardware,
-  fetchHardwareList,
-  importExcel,
-} from "@/services/api";
+import { deleteHardware, importExcel } from "@/services/api";
 import { HARDWARE_ITEMS_PER_PAGE } from "@/constants/hardware";
 import {
   filterHardwareItems,
@@ -33,13 +29,26 @@ import { AnimatePresence } from "framer-motion";
 import { useRef } from "react";
 import Swal from "sweetalert2";
 
-export const HardwareDirectory: React.FC = () => {
-  const [hardwareItems, setHardwareItems] = useState<Hardware[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+interface HardwareDirectoryProps {
+  hardwareItems: Hardware[];
+  isLoading: boolean;
+  error: string | null;
+  onErrorChange: React.Dispatch<React.SetStateAction<string | null>>;
+  onHardwareItemsChange: React.Dispatch<React.SetStateAction<Hardware[]>>;
+  onReload: () => Promise<void>;
+}
+
+export const HardwareDirectory: React.FC<HardwareDirectoryProps> = ({
+  hardwareItems,
+  isLoading,
+  error,
+  onErrorChange,
+  onHardwareItemsChange,
+  onReload,
+}) => {
   const [isImporting, setIsImporting] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Hardware | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedItem, setSelectedItem] = useState<Hardware | null>(null);
   const [deletingHardwareId, setDeletingHardwareId] = useState<number | null>(
@@ -53,40 +62,16 @@ export const HardwareDirectory: React.FC = () => {
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const loadHardware = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      const data = await fetchHardwareList();
-      console.log(`Fetched ${data.length} hardware items from API`);
-      setHardwareItems(data);
-    } catch (err) {
-      console.error("Failed to fetch hardware:", err);
-      setError(
-        err instanceof Error ? err.message : "An unexpected error occurred",
-      );
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      void loadHardware();
-    }, 0);
-
-    return () => window.clearTimeout(timer);
-  }, [loadHardware]);
-
   const handleImportClick = () => {
     fileInputRef.current?.click();
   };
 
   const handleAddHardwareSuccess = async () => {
-    await loadHardware();
+    await onReload();
   };
 
   const handleEditHardwareSuccess = async () => {
-    await loadHardware();
+    await onReload();
     setEditingItem(null);
   };
 
@@ -100,16 +85,16 @@ export const HardwareDirectory: React.FC = () => {
 
     try {
       setIsImporting(true);
-      setError(null);
+      onErrorChange(null);
       const result = await importExcel(file);
       console.log("Import successful:", result);
       alert(
         `Successfully imported ${result.imported} items. ${result.skipped} items were skipped.`,
       );
-      await loadHardware();
+      await onReload();
     } catch (err) {
       console.error("Import failed:", err);
-      setError(
+      onErrorChange(
         err instanceof Error ? err.message : "Failed to import Excel file",
       );
     } finally {
@@ -166,7 +151,7 @@ export const HardwareDirectory: React.FC = () => {
     try {
       setDeletingHardwareId(item.id);
       await deleteHardware(item.id);
-      setHardwareItems((prev) =>
+      onHardwareItemsChange((prev) =>
         prev.filter((hardwareItem) => hardwareItem.id !== item.id),
       );
       const remainingVisibleItems = sortedItems.length - 1;
@@ -209,7 +194,7 @@ export const HardwareDirectory: React.FC = () => {
           </p>
           <p className="text-slate-600 mb-6 text-sm">{error}</p>
           <button
-            onClick={() => window.location.reload()}
+            onClick={() => void onReload()}
             className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors"
           >
             Retry
@@ -281,7 +266,7 @@ export const HardwareDirectory: React.FC = () => {
                 onChange={(e) => setFilterType(e.target.value)}
                 className="px-3 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors outline-none focus:ring-2 focus:ring-purple-500/20"
               >
-                <option value="All">All Hardware Types</option>
+                <option value="All">ALL HARDWARE TYPES</option>
                 {[...new Set(hardwareItems.map((item) => item.hardware_type))]
                   .sort()
                   .map((type) => (
@@ -353,6 +338,14 @@ export const HardwareDirectory: React.FC = () => {
                   </th>
                   <th
                     className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer hover:text-purple-600 transition-colors"
+                    onClick={() => handleSort("date_tested")}
+                  >
+                    <div className="flex items-center">
+                      Date Tested {renderSortIcon("date_tested")}
+                    </div>
+                  </th>
+                  <th
+                    className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer hover:text-purple-600 transition-colors"
                     onClick={() => handleSort("date_created")}
                   >
                     <div className="flex items-center">
@@ -386,6 +379,9 @@ export const HardwareDirectory: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-600">
                       {item.model_number}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-slate-600">
+                      {item.date_tested || "—"}
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-600">
                       {item.date_created}
@@ -440,8 +436,7 @@ export const HardwareDirectory: React.FC = () => {
               currentPage * HARDWARE_ITEMS_PER_PAGE,
               filteredItems.length,
             )}{" "}
-            of{" "}
-            {filteredItems.length} entries
+            of {filteredItems.length} entries
           </p>
           <div className="flex items-center gap-2">
             <button
@@ -515,7 +510,7 @@ export const HardwareDirectory: React.FC = () => {
           <AddHardwareModal
             hardware={editingItem}
             onClose={() => setEditingItem(null)}
-            onImagesChanged={loadHardware}
+            onImagesChanged={onReload}
             onSuccess={handleEditHardwareSuccess}
           />
         )}

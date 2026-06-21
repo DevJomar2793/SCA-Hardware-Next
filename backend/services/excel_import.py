@@ -20,11 +20,11 @@ EXCEL_COLUMN_MAPPING = {
     "Warranty": ("warranty", "str"),
     "Model #": ("model_number", "str"),
     "Serial #": ("serial_number", "str"),
-    "Screen\nSize ": ("screen_size", "str"),
+    "Screen\nSize ": ("screen_size", "int"),
     "Processor Type / Screen Type": ("processor_type", "str"),
     "Processor Speed ": ("processor_speed", "str"),
     "Operating\nSystem/Android Version/MAC OS ": ("operating_system", "str"),
-    "Ram": ("ram", "str"),
+    "Ram": ("ram", "int"),
     "HD type": ("hd_type", "str"),
     "HD/STORAGE\nCapacity ": ("hd_storage", "str"),
     "Operational Y/N": ("operational", "str"),
@@ -75,7 +75,11 @@ def safe_int(value: Any) -> int | None:
         return None
 
     try:
-        return int(float(value))
+        if isinstance(value, (int, float)):
+            return int(value)
+
+        match = re.search(r"\d+(?:\.\d+)?", str(value))
+        return int(float(match.group(0))) if match else None
     except (ValueError, TypeError):
         return None
 
