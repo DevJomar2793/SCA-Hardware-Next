@@ -82,7 +82,7 @@ class AssignHardwareDetails(Base):
     history = Column(String, nullable=True)
     notes = Column(String, nullable=True)
     created_at = Column(String, default=current_timestamp)
-    updated_at = Column(String, default=lambda: datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    updated_at = Column(String, default=current_timestamp, onupdate=current_timestamp)
     
     
  
