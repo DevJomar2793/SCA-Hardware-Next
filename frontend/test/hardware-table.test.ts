@@ -33,7 +33,8 @@ function makeHardware(overrides: Partial<Hardware>): Hardware {
     date_of_arrival: null,
     new_or_used: "New",
     images: [],
-    date_created: null,
+    created_at: null,
+    updated_at: null,
     ...overrides,
   };
 }

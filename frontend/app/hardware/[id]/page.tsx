@@ -471,7 +471,12 @@ export default function HardwareDetailPage() {
                   />
                   <DetailItem
                     label="Created Date"
-                    value={hardware.date_created}
+                    value={hardware.created_at}
+                    icon={Clock3}
+                  />
+                  <DetailItem
+                    label="Updated Date"
+                    value={hardware.updated_at}
                     icon={Clock3}
                   />
                 </div>

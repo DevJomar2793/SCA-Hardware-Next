@@ -186,7 +186,8 @@ class HardwareUpdate(BaseModel):
 class Hardware(HardwareBase):
     id: int
     images: List[str] = []
-    date_created: Optional[str] = None
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -231,7 +232,8 @@ class EmployeeUpdate(BaseModel):
 
 class EmployeeDetails(EmployeeBase):
     id: int
-    date_created: Optional[str] = None
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
 
     class Config:
         from_attributes = True

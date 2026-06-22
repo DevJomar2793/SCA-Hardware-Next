@@ -8,7 +8,8 @@ EMPLOYEE_DETAILS_COLUMNS = {
     "date_hired": "VARCHAR",
     "status": "VARCHAR",
     "notes": "VARCHAR",
-    "date_created": "VARCHAR",
+    "created_at": "VARCHAR",
+    "updated_at": "VARCHAR",
 }
 
 TEXT_TYPE_MARKERS = ("CHAR", "CLOB", "STRING", "TEXT", "VARCHAR")
@@ -38,6 +39,23 @@ def sync_employee_details_schema(engine: Engine) -> None:
                         f"ADD COLUMN {column_name} {column_type}"
                     )
                 )
+
+    with engine.begin() as connection:
+        if "date_created" in existing_columns and "created_at" in missing_columns:
+            connection.execute(
+                text(
+                    "UPDATE employee_details "
+                    "SET created_at = date_created "
+                    "WHERE created_at IS NULL"
+                )
+            )
+        connection.execute(
+            text(
+                "UPDATE employee_details "
+                "SET updated_at = created_at "
+                "WHERE updated_at IS NULL"
+            )
+        )
 
     inspector.clear_cache()
     updated_columns = {
@@ -70,13 +88,47 @@ def sync_hardware_schema(engine: Engine) -> None:
     existing_columns = {
         column["name"]: column for column in inspector.get_columns("hardware_table")
     }
-    if "date_tested" not in existing_columns:
+    hardware_columns = {
+        "date_tested": "VARCHAR",
+        "created_at": "VARCHAR",
+        "updated_at": "VARCHAR",
+    }
+    missing_columns = {
+        column_name: column_type
+        for column_name, column_type in hardware_columns.items()
+        if column_name not in existing_columns
+    }
+
+    if missing_columns:
         with engine.begin() as connection:
-            connection.execute(text("ALTER TABLE hardware_table ADD COLUMN date_tested VARCHAR"))
+            for column_name, column_type in missing_columns.items():
+                connection.execute(
+                    text(
+                        f"ALTER TABLE hardware_table "
+                        f"ADD COLUMN {column_name} {column_type}"
+                    )
+                )
+            if "date_created" in existing_columns and "created_at" in missing_columns:
+                connection.execute(
+                    text(
+                        "UPDATE hardware_table "
+                        "SET created_at = date_created "
+                        "WHERE created_at IS NULL"
+                    )
+                )
         inspector.clear_cache()
         existing_columns = {
             column["name"]: column for column in inspector.get_columns("hardware_table")
         }
+
+    with engine.begin() as connection:
+        connection.execute(
+            text(
+                "UPDATE hardware_table "
+                "SET updated_at = created_at "
+                "WHERE updated_at IS NULL"
+            )
+        )
 
     if not (
         any(
@@ -136,7 +188,8 @@ def _rebuild_hardware_for_integer_specs(engine: Engine) -> None:
                 "price_peso FLOAT, "
                 "date_of_arrival VARCHAR, "
                 "new_or_used VARCHAR, "
-                "date_created VARCHAR"
+                "created_at VARCHAR, "
+                "updated_at VARCHAR"
                 ")"
             )
         )
@@ -147,7 +200,7 @@ def _rebuild_hardware_for_integer_specs(engine: Engine) -> None:
                 "manufacturer, warranty, model_number, serial_number, screen_size, "
                 "processor_type, processor_speed, operating_system, ram, hd_type, "
                 "hd_storage, operational, price_dollar, price_peso, date_of_arrival, "
-                "new_or_used, date_created"
+                "new_or_used, created_at, updated_at"
                 ") "
                 "SELECT "
                 "id, ckt_item_number, hardware_type, notes, date_tested, qty, "
@@ -155,7 +208,7 @@ def _rebuild_hardware_for_integer_specs(engine: Engine) -> None:
                 "CAST(NULLIF(screen_size, '') AS INTEGER), processor_type, "
                 "processor_speed, operating_system, CAST(NULLIF(ram, '') AS INTEGER), "
                 "hd_type, CAST(hd_storage AS TEXT), operational, price_dollar, price_peso, "
-                "date_of_arrival, new_or_used, date_created "
+                "date_of_arrival, new_or_used, created_at, updated_at "
                 "FROM hardware_table"
             )
         )
@@ -203,7 +256,8 @@ def _rebuild_employee_details_for_text_contact_number(engine: Engine) -> None:
                 "date_hired VARCHAR, "
                 "status VARCHAR, "
                 "notes VARCHAR, "
-                "date_created VARCHAR"
+                "created_at VARCHAR, "
+                "updated_at VARCHAR"
                 ")"
             )
         )
@@ -211,12 +265,12 @@ def _rebuild_employee_details_for_text_contact_number(engine: Engine) -> None:
             text(
                 "INSERT INTO employee_details_new ("
                 "id, employee_digit_code, first_name, last_name, contact_number, "
-                "position, department, date_hired, status, notes, date_created"
+                "position, department, date_hired, status, notes, created_at, updated_at"
                 ") "
                 "SELECT "
                 "id, employee_digit_code, first_name, last_name, "
                 "CAST(contact_number AS TEXT), position, department, date_hired, "
-                "status, notes, date_created "
+                "status, notes, created_at, updated_at "
                 "FROM employee_details"
             )
         )

@@ -20,7 +20,8 @@ function makeEmployee(overrides: Partial<EmployeeDetails>): EmployeeDetails {
     date_hired: "2026-01-10",
     status: "Active",
     notes: null,
-    date_created: null,
+    created_at: null,
+    updated_at: null,
     ...overrides,
   };
 }

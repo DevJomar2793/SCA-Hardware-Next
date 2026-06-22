@@ -301,7 +301,12 @@ export default function EmployeeDetailPage() {
                   />
                   <DetailItem
                     label="Created Date"
-                    value={employee.date_created}
+                    value={employee.created_at}
+                    icon={Clock3}
+                  />
+                  <DetailItem
+                    label="Updated Date"
+                    value={employee.updated_at}
                     icon={Clock3}
                   />
                 </div>

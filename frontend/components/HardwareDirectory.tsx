@@ -279,10 +279,10 @@ export const HardwareDirectory: React.FC<HardwareDirectoryProps> = ({
                   </th>
                   <th
                     className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer hover:text-purple-600 transition-colors"
-                    onClick={() => handleSort("date_created")}
+                    onClick={() => handleSort("created_at")}
                   >
                     <div className="flex items-center">
-                      Created At {renderSortIcon("date_created")}
+                      Created At {renderSortIcon("created_at")}
                     </div>
                   </th>
                 </tr>
@@ -314,7 +314,7 @@ export const HardwareDirectory: React.FC<HardwareDirectoryProps> = ({
                       {item.date_tested || "—"}
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-600">
-                      {item.date_created}
+                      {item.created_at}
                     </td>
                   </tr>
                 ))}

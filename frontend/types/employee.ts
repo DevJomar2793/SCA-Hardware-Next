@@ -9,7 +9,8 @@ export interface EmployeeDetails {
   date_hired: string | null;
   status: string | null;
   notes: string | null;
-  date_created: string | null;
+  created_at: string | null;
+  updated_at: string | null;
 }
 
 export interface AddEmployeePayload {
