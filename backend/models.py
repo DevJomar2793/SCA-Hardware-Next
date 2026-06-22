@@ -70,19 +70,19 @@ class EmployeeDetails(Base):
     def name(self):
         return f"{self.first_name} {self.last_name}"
 
-# class AssignHardwareDetails(Base):
-#     __tablename__ = "assign_hardware_details"
+class AssignHardwareDetails(Base):
+    __tablename__ = "assign_hardware_details"
     
-#     id = Column(Integer, primary_key=True, index=True)
-#     employee_digit_code = Column(String, nullable=False)
-#     ckt_item_number = Column(String, nullable=False)
-#     date_assigned = Column(String, nullable=False)
-#     date_returned = Column(String, nullable=True)
-#     status = Column(String, nullable=False)
-#     history = Column(String, nullable=True)
-#     notes = Column(String, nullable=True)
-#     create_at = Column(String, default=lambda: datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-#     updated_at = Column(String, default=lambda: datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    id = Column(Integer, primary_key=True, index=True)
+    employee_digit_code = Column(String, nullable=False)
+    ckt_item_number = Column(String, nullable=False)
+    date_assigned = Column(String, nullable=False)
+    date_returned = Column(String, nullable=True)
+    status = Column(String, nullable=False)
+    history = Column(String, nullable=True)
+    notes = Column(String, nullable=True)
+    created_at = Column(String, default=current_timestamp)
+    updated_at = Column(String, default=lambda: datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
     
     
  
