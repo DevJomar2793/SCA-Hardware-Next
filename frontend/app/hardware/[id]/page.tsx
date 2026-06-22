@@ -23,7 +23,6 @@ import {
   X,
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
-import Swal from "sweetalert2";
 import {
   API_BASE_URL,
   deleteHardware,
@@ -151,40 +150,24 @@ export default function HardwareDetailPage() {
   const handleDeleteHardware = async () => {
     if (!hardware) return;
 
-    const result = await Swal.fire({
-      title: "Delete hardware?",
-      text: `This will permanently delete ${hardware.ckt_item_number}.`,
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonText: "Delete",
-      cancelButtonText: "Cancel",
-      confirmButtonColor: "#dc2626",
-      cancelButtonColor: "#64748b",
-      reverseButtons: true,
-    });
+    const isConfirmed = window.confirm(
+      `This will permanently delete ${hardware.ckt_item_number}.`,
+    );
 
-    if (!result.isConfirmed) return;
+    if (!isConfirmed) return;
 
     try {
       setIsDeleting(true);
       await deleteHardware(hardware.id);
-      await Swal.fire({
-        title: "Deleted",
-        text: `${hardware.ckt_item_number} has been deleted.`,
-        icon: "success",
-        timer: 1800,
-        showConfirmButton: false,
-      });
+      window.sessionStorage.setItem(
+        "hardware-delete-toast",
+        "Hardware deleted successfully",
+      );
       router.push("/hardware");
     } catch (err) {
-      void Swal.fire({
-        title: "Delete failed",
-        text:
-          err instanceof Error
-            ? err.message
-            : "Failed to delete hardware item.",
-        icon: "error",
-      });
+      window.alert(
+        err instanceof Error ? err.message : "Failed to delete hardware item.",
+      );
     } finally {
       setIsDeleting(false);
     }

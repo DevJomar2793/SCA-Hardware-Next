@@ -16,7 +16,7 @@ import {
 const menuItems = [
   { name: "Overview", icon: LayoutDashboard, href: "/" },
   { name: "Hardware", icon: HardDrive, href: "/hardware" },
-  { name: "Deployment", icon: RefreshCw, href: "/deployment" },
+  { name: "Employee", icon: RefreshCw, href: "/employee" },
   { name: "Analytics", icon: BarChart3, href: "/analytics" },
   { name: "Settings", icon: Settings, href: "/settings" },
 ];

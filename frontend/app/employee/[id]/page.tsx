@@ -16,7 +16,6 @@ import {
   UserRound,
 } from "lucide-react";
 import { AnimatePresence } from "framer-motion";
-import Swal from "sweetalert2";
 import { deleteEmployee, fetchEmployeeById } from "@/services/api";
 import { AddEmployeeModal } from "@/components/AddEmployeeModal";
 import { EmployeeDetails } from "@/types/employee";
@@ -120,9 +119,10 @@ export default function EmployeeDetailPage() {
 
   const status = employee?.status || "-";
   const statusStyle = statusStyles[status] ?? fallbackStatusStyle;
-  const fullName = useMemo(() => (employee ? getFullName(employee) : "-"), [
-    employee,
-  ]);
+  const fullName = useMemo(
+    () => (employee ? getFullName(employee) : "-"),
+    [employee],
+  );
 
   const handleEditSuccess = async () => {
     await loadEmployee();
@@ -132,38 +132,24 @@ export default function EmployeeDetailPage() {
   const handleDeleteEmployee = async () => {
     if (!employee) return;
 
-    const result = await Swal.fire({
-      title: "Delete employee?",
-      text: `This will permanently delete ${getFullName(employee)}.`,
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonText: "Delete",
-      cancelButtonText: "Cancel",
-      confirmButtonColor: "#dc2626",
-      cancelButtonColor: "#64748b",
-      reverseButtons: true,
-    });
+    const isConfirmed = window.confirm(
+      `This will permanently delete ${getFullName(employee)}.`,
+    );
 
-    if (!result.isConfirmed) return;
+    if (!isConfirmed) return;
 
     try {
       setIsDeleting(true);
       await deleteEmployee(employee.id);
-      await Swal.fire({
-        title: "Deleted",
-        text: `${getFullName(employee)} has been deleted.`,
-        icon: "success",
-        timer: 1800,
-        showConfirmButton: false,
-      });
-      router.push("/deployment");
+      window.sessionStorage.setItem(
+        "employee-delete-toast",
+        "Employee deleted successfully",
+      );
+      router.push("/employee");
     } catch (err) {
-      void Swal.fire({
-        title: "Delete failed",
-        text:
-          err instanceof Error ? err.message : "Failed to delete employee.",
-        icon: "error",
-      });
+      window.alert(
+        err instanceof Error ? err.message : "Failed to delete employee.",
+      );
     } finally {
       setIsDeleting(false);
     }
@@ -192,10 +178,10 @@ export default function EmployeeDetailPage() {
           </p>
           <div className="flex justify-center gap-3">
             <Link
-              href="/deployment"
+              href="/employee"
               className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-gray-50"
             >
-              Back to Deployment
+              Back to Employee
             </Link>
             <button
               type="button"
@@ -215,11 +201,11 @@ export default function EmployeeDetailPage() {
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <Link
-            href="/deployment"
+            href="/employee"
             className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 shadow-sm transition-colors hover:bg-gray-50"
           >
             <ArrowLeft size={16} />
-            Back to Deployment
+            Back to Employee
           </Link>
           <div className="flex items-center gap-3">
             <button

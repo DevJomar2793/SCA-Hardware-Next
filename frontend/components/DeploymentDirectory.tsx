@@ -91,7 +91,9 @@ export function DeploymentDirectory({
     return sortEmployeeItems(filteredEmployees, sortConfig);
   }, [filteredEmployees, sortConfig]);
 
-  const totalPages = Math.ceil(sortedEmployees.length / HARDWARE_ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(
+    sortedEmployees.length / HARDWARE_ITEMS_PER_PAGE,
+  );
   const paginatedEmployees = paginateEmployeeItems(
     sortedEmployees,
     currentPage,
@@ -260,7 +262,10 @@ export function DeploymentDirectory({
                 </tr>
               ) : filteredEmployees.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-20 text-center text-slate-500">
+                  <td
+                    colSpan={7}
+                    className="px-6 py-20 text-center text-slate-500"
+                  >
                     No employees found.
                   </td>
                 </tr>
@@ -277,7 +282,7 @@ export function DeploymentDirectory({
                     >
                       <td className="px-6 py-4 text-sm font-semibold text-purple-600">
                         <Link
-                          href={`/deployment/${employee.id}`}
+                          href={`/employee/${employee.id}`}
                           className="text-purple-600 hover:text-purple-800 font-semibold hover:underline transition-colors"
                         >
                           {displayValue(employee.employee_digit_code)}

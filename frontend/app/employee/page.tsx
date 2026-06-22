@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { DeploymentDirectory } from "@/components/DeploymentDirectory";
 import { fetchEmployeeList } from "@/services/api";
 import { EmployeeDetails } from "@/types/employee";
+import Swal from "sweetalert2";
 
 export default function DeploymentPage() {
   const [employees, setEmployees] = useState<EmployeeDetails[]>([]);
@@ -32,6 +33,22 @@ export default function DeploymentPage() {
 
     return () => window.clearTimeout(timer);
   }, [loadEmployees]);
+
+  useEffect(() => {
+    const message = window.sessionStorage.getItem("employee-delete-toast");
+    if (!message) return;
+
+    window.sessionStorage.removeItem("employee-delete-toast");
+    void Swal.fire({
+      toast: true,
+      position: "top-end",
+      icon: "success",
+      title: message,
+      showConfirmButton: false,
+      timer: 3000,
+      timerProgressBar: true,
+    });
+  }, []);
 
   return (
     <DeploymentDirectory
