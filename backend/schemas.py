@@ -237,3 +237,37 @@ class EmployeeDetails(EmployeeBase):
 
     class Config:
         from_attributes = True
+
+
+class AssignHardwareBase(BaseModel):
+    employee_details_id: Optional[int] = None
+    hardware_id: Optional[int] = None
+    date_assigned: Optional[str] = None
+    date_returned: Optional[str] = None
+    status: Optional[str] = None
+    history: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class AssignHardwareCreate(AssignHardwareBase):
+    employee_details_id: int
+    hardware_id: int
+    date_assigned: str
+    status: str = "Assigned"
+
+
+class AssignHardwareUpdate(AssignHardwareBase):
+    pass
+
+
+class AssignHardwareDetails(AssignHardwareBase):
+    id: int
+    employee_details_id: int
+    hardware_id: int
+    date_assigned: str
+    status: str
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
+
+    class Config:
+        from_attributes = True

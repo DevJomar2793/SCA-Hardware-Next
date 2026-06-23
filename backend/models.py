@@ -36,6 +36,11 @@ class Hardware(Base):
     created_at = Column(String, default=current_timestamp)
     updated_at = Column(String, default=current_timestamp, onupdate=current_timestamp)
     image_objects = relationship("HardwareImage", back_populates="hardware", cascade="all, delete-orphan")
+    assign_hardware_details = relationship(
+        "AssignHardwareDetails",
+        back_populates="hardware",
+        cascade="all, delete-orphan",
+    )
 
     @property
     def images(self):
@@ -65,6 +70,11 @@ class EmployeeDetails(Base):
     notes = Column(String, nullable=True)
     created_at = Column(String, default=current_timestamp)
     updated_at = Column(String, default=current_timestamp, onupdate=current_timestamp)
+    assign_hardware_details = relationship(
+        "AssignHardwareDetails",
+        back_populates="employee",
+        cascade="all, delete-orphan",
+    )
     
     @property
     def name(self):
@@ -74,8 +84,6 @@ class AssignHardwareDetails(Base):
     __tablename__ = "assign_hardware_details"
     
     id = Column(Integer, primary_key=True, index=True)
-    employee_digit_code = Column(String, nullable=False)
-    ckt_item_number = Column(String, nullable=False)
     date_assigned = Column(String, nullable=False)
     date_returned = Column(String, nullable=True)
     status = Column(String, nullable=False)
@@ -83,6 +91,13 @@ class AssignHardwareDetails(Base):
     notes = Column(String, nullable=True)
     created_at = Column(String, default=current_timestamp)
     updated_at = Column(String, default=current_timestamp, onupdate=current_timestamp)
+
+    employee_details_id = Column(Integer, ForeignKey("employee_details.id"), nullable=False)
+    hardware_id = Column(Integer, ForeignKey("hardware_table.id"), nullable=False)
+
+    employee = relationship("EmployeeDetails", back_populates="assign_hardware_details")
+    hardware = relationship("Hardware", back_populates="assign_hardware_details")
+    
     
     
  

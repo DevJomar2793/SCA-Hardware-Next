@@ -11,12 +11,14 @@ import {
   LogOut,
   Square,
   RefreshCw,
+  RotateCw,
 } from "lucide-react";
 
 const menuItems = [
   { name: "Overview", icon: LayoutDashboard, href: "/" },
   { name: "Hardware", icon: HardDrive, href: "/hardware" },
   { name: "Employee", icon: RefreshCw, href: "/employee" },
+  { name: "Deployment", icon: RotateCw, href: "/deployment" },
   { name: "Analytics", icon: BarChart3, href: "/analytics" },
   { name: "Settings", icon: Settings, href: "/settings" },
 ];

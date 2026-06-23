@@ -15,6 +15,18 @@ EMPLOYEE_DETAILS_COLUMNS = {
 TEXT_TYPE_MARKERS = ("CHAR", "CLOB", "STRING", "TEXT", "VARCHAR")
 INTEGER_TYPE_MARKERS = ("INT",)
 
+ASSIGN_HARDWARE_DETAILS_COLUMNS = {
+    "employee_details_id": "INTEGER",
+    "hardware_id": "INTEGER",
+    "date_assigned": "VARCHAR",
+    "date_returned": "VARCHAR",
+    "status": "VARCHAR",
+    "history": "VARCHAR",
+    "notes": "VARCHAR",
+    "created_at": "VARCHAR",
+    "updated_at": "VARCHAR",
+}
+
 
 def sync_employee_details_schema(engine: Engine) -> None:
     inspector = inspect(engine)
@@ -140,6 +152,176 @@ def sync_hardware_schema(engine: Engine) -> None:
         return
 
     _rebuild_hardware_for_integer_specs(engine)
+
+
+def sync_assign_hardware_details_schema(engine: Engine) -> None:
+    inspector = inspect(engine)
+    if "assign_hardware_details" not in inspector.get_table_names():
+        with engine.begin() as connection:
+            connection.execute(
+                text(
+                    "CREATE TABLE assign_hardware_details ("
+                    "id INTEGER NOT NULL PRIMARY KEY, "
+                    "employee_details_id INTEGER NOT NULL, "
+                    "hardware_id INTEGER NOT NULL, "
+                    "date_assigned VARCHAR NOT NULL, "
+                    "date_returned VARCHAR, "
+                    "status VARCHAR NOT NULL, "
+                    "history VARCHAR, "
+                    "notes VARCHAR, "
+                    "created_at VARCHAR, "
+                    "updated_at VARCHAR, "
+                    "FOREIGN KEY(employee_details_id) REFERENCES employee_details (id), "
+                    "FOREIGN KEY(hardware_id) REFERENCES hardware_table (id)"
+                    ")"
+                )
+            )
+        inspector.clear_cache()
+
+    existing_columns = {
+        column["name"]: column
+        for column in inspector.get_columns("assign_hardware_details")
+    }
+
+    if engine.dialect.name == "sqlite" and _needs_assign_hardware_details_rebuild(
+        existing_columns
+    ):
+        _rebuild_assign_hardware_details_schema(engine, existing_columns)
+        inspector.clear_cache()
+        existing_columns = {
+            column["name"]: column
+            for column in inspector.get_columns("assign_hardware_details")
+        }
+
+    missing_columns = {
+        column_name: column_type
+        for column_name, column_type in ASSIGN_HARDWARE_DETAILS_COLUMNS.items()
+        if column_name not in existing_columns
+    }
+
+    if missing_columns:
+        with engine.begin() as connection:
+            for column_name, column_type in missing_columns.items():
+                connection.execute(
+                    text(
+                        f"ALTER TABLE assign_hardware_details "
+                        f"ADD COLUMN {column_name} {column_type}"
+                    )
+                )
+
+    with engine.begin() as connection:
+        connection.execute(
+            text(
+                "UPDATE assign_hardware_details "
+                "SET updated_at = created_at "
+                "WHERE updated_at IS NULL"
+            )
+        )
+        connection.execute(
+            text(
+                "CREATE INDEX IF NOT EXISTS "
+                "ix_assign_hardware_details_employee_details_id "
+                "ON assign_hardware_details (employee_details_id)"
+            )
+        )
+        connection.execute(
+            text(
+                "CREATE INDEX IF NOT EXISTS "
+                "ix_assign_hardware_details_hardware_id "
+                "ON assign_hardware_details (hardware_id)"
+            )
+        )
+
+
+def _needs_assign_hardware_details_rebuild(columns: dict) -> bool:
+    expected_columns = {"id", *ASSIGN_HARDWARE_DETAILS_COLUMNS.keys()}
+    return any(
+        column_name not in expected_columns and not column.get("nullable", True)
+        for column_name, column in columns.items()
+    )
+
+
+def _rebuild_assign_hardware_details_schema(engine: Engine, columns: dict) -> None:
+    def old_column_or_null(column_name: str) -> str:
+        return f"old.{column_name}" if column_name in columns else "NULL"
+
+    employee_expr = "NULL"
+    if "employee_details_id" in columns:
+        employee_expr = "old.employee_details_id"
+    elif "employee_digit_code" in columns:
+        employee_expr = "employee_details.id"
+    if "employee_digit_code" in columns and "employee_details_id" in columns:
+        employee_expr = "COALESCE(old.employee_details_id, employee_details.id)"
+
+    history_expr = "old.history" if "history" in columns else "NULL"
+    if "logs" in columns and "history" in columns:
+        history_expr = "COALESCE(old.history, old.logs)"
+    elif "logs" in columns:
+        history_expr = "old.logs"
+
+    hardware_expr = old_column_or_null("hardware_id")
+    date_assigned_expr = (
+        "old.date_assigned" if "date_assigned" in columns else "''"
+    )
+    date_returned_expr = old_column_or_null("date_returned")
+    status_expr = "old.status" if "status" in columns else "'Assigned'"
+    notes_expr = old_column_or_null("notes")
+    created_at_expr = old_column_or_null("created_at")
+    updated_at_expr = old_column_or_null("updated_at")
+
+    with engine.begin() as connection:
+        connection.execute(text("DROP TABLE IF EXISTS assign_hardware_details_new"))
+        connection.execute(
+            text(
+                "CREATE TABLE assign_hardware_details_new ("
+                "id INTEGER NOT NULL PRIMARY KEY, "
+                "employee_details_id INTEGER NOT NULL, "
+                "hardware_id INTEGER NOT NULL, "
+                "date_assigned VARCHAR NOT NULL, "
+                "date_returned VARCHAR, "
+                "status VARCHAR NOT NULL, "
+                "history VARCHAR, "
+                "notes VARCHAR, "
+                "created_at VARCHAR, "
+                "updated_at VARCHAR, "
+                "FOREIGN KEY(employee_details_id) REFERENCES employee_details (id), "
+                "FOREIGN KEY(hardware_id) REFERENCES hardware_table (id)"
+                ")"
+            )
+        )
+
+        join_clause = ""
+        if "employee_digit_code" in columns:
+            join_clause = (
+                "LEFT JOIN employee_details "
+                "ON employee_details.employee_digit_code = old.employee_digit_code "
+            )
+
+        connection.execute(
+            text(
+                "INSERT INTO assign_hardware_details_new ("
+                "id, employee_details_id, hardware_id, date_assigned, "
+                "date_returned, status, history, notes, created_at, updated_at"
+                ") "
+                "SELECT "
+                f"old.id, {employee_expr}, {hardware_expr}, {date_assigned_expr}, "
+                f"{date_returned_expr}, {status_expr}, {history_expr}, {notes_expr}, "
+                f"{created_at_expr}, {updated_at_expr} "
+                "FROM assign_hardware_details old "
+                f"{join_clause}"
+                f"WHERE {employee_expr} IS NOT NULL "
+                f"AND {hardware_expr} IS NOT NULL "
+                f"AND {date_assigned_expr} IS NOT NULL "
+                f"AND {status_expr} IS NOT NULL"
+            )
+        )
+        connection.execute(text("DROP TABLE assign_hardware_details"))
+        connection.execute(
+            text(
+                "ALTER TABLE assign_hardware_details_new "
+                "RENAME TO assign_hardware_details"
+            )
+        )
 
 
 def _needs_integer_column_rebuild(columns: dict, column_name: str) -> bool:
