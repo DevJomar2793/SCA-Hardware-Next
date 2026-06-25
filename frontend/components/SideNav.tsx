@@ -11,12 +11,14 @@ import {
   LogOut,
   Square,
   RefreshCw,
+  RotateCw,
 } from "lucide-react";
 
 const menuItems = [
   { name: "Overview", icon: LayoutDashboard, href: "/" },
   { name: "Hardware", icon: HardDrive, href: "/hardware" },
-  { name: "Deployment", icon: RefreshCw, href: "/deployment" },
+  { name: "Employee", icon: RefreshCw, href: "/employee" },
+  { name: "Assignment", icon: RotateCw, href: "/assignment" },
   { name: "Analytics", icon: BarChart3, href: "/analytics" },
   { name: "Settings", icon: Settings, href: "/settings" },
 ];
@@ -48,7 +50,9 @@ export const SideNav: React.FC = () => {
       {/* Navigation Menu */}
       <nav className="flex-1 p-4 space-y-2">
         {menuItems.map((item) => {
-          const isActive = clientPathname === item.href;
+          const isActive =
+            clientPathname === item.href ||
+            (item.href !== "/" && clientPathname.startsWith(`${item.href}/`));
           return (
             <Link
               key={item.name}

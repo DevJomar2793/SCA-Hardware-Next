@@ -22,15 +22,16 @@ export interface Hardware {
   date_of_arrival: string | null;
   new_or_used: string;
   images: string[];
-  date_created: string | null;
+  created_at: string | null;
+  updated_at: string | null;
 }
 
 export type AddHardwarePayload = Partial<
-  Omit<Hardware, "id" | "images" | "date_created">
+  Omit<Hardware, "id" | "images" | "created_at" | "updated_at">
 >;
 
 export type UpdateHardwarePayload = Partial<
-  Omit<Hardware, "id" | "images" | "date_created">
+  Omit<Hardware, "id" | "images" | "created_at" | "updated_at">
 >;
 
 export type SortDirection = "asc" | "desc" | null;

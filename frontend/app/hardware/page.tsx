@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { HardwareDirectory } from "@/components/HardwareDirectory";
 import { fetchHardwareList } from "@/services/api";
 import { Hardware } from "@/types/hardware";
+import Swal from "sweetalert2";
 
 export default function HardwarePage() {
   const [hardwareItems, setHardwareItems] = useState<Hardware[]>([]);
@@ -35,13 +36,28 @@ export default function HardwarePage() {
     return () => window.clearTimeout(timer);
   }, [loadHardware]);
 
+  useEffect(() => {
+    const message = window.sessionStorage.getItem("hardware-delete-toast");
+    if (!message) return;
+
+    window.sessionStorage.removeItem("hardware-delete-toast");
+    void Swal.fire({
+      toast: true,
+      position: "top-end",
+      icon: "success",
+      title: message,
+      showConfirmButton: false,
+      timer: 3000,
+      timerProgressBar: true,
+    });
+  }, []);
+
   return (
     <HardwareDirectory
       hardwareItems={hardwareItems}
       isLoading={isLoading}
       error={error}
       onErrorChange={setError}
-      onHardwareItemsChange={setHardwareItems}
       onReload={loadHardware}
     />
   );

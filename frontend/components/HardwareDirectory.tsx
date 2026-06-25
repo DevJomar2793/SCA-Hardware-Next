@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import {
   Search,
   Filter,
@@ -11,10 +12,8 @@ import {
   FileUp,
   ChevronUp,
   ChevronDown,
-  Pencil,
-  Trash2,
 } from "lucide-react";
-import { deleteHardware, importExcel } from "@/services/api";
+import { importExcel } from "@/services/api";
 import { HARDWARE_ITEMS_PER_PAGE } from "@/constants/hardware";
 import {
   filterHardwareItems,
@@ -23,18 +22,15 @@ import {
   sortHardwareItems,
 } from "@/lib/hardware-table";
 import { Hardware, HardwareSortConfig } from "@/types/hardware";
-import { HardwareDetailModal } from "./HardwareDetailModal";
 import { AddHardwareModal } from "./AddHardwareModal";
 import { AnimatePresence } from "framer-motion";
 import { useRef } from "react";
-import Swal from "sweetalert2";
 
 interface HardwareDirectoryProps {
   hardwareItems: Hardware[];
   isLoading: boolean;
   error: string | null;
   onErrorChange: React.Dispatch<React.SetStateAction<string | null>>;
-  onHardwareItemsChange: React.Dispatch<React.SetStateAction<Hardware[]>>;
   onReload: () => Promise<void>;
 }
 
@@ -43,17 +39,11 @@ export const HardwareDirectory: React.FC<HardwareDirectoryProps> = ({
   isLoading,
   error,
   onErrorChange,
-  onHardwareItemsChange,
   onReload,
 }) => {
   const [isImporting, setIsImporting] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState<Hardware | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedItem, setSelectedItem] = useState<Hardware | null>(null);
-  const [deletingHardwareId, setDeletingHardwareId] = useState<number | null>(
-    null,
-  );
   const [currentPage, setCurrentPage] = useState(1);
   const [filterType, setFilterType] = useState("All");
   const [sortConfig, setSortConfig] = useState<HardwareSortConfig>({
@@ -68,11 +58,6 @@ export const HardwareDirectory: React.FC<HardwareDirectoryProps> = ({
 
   const handleAddHardwareSuccess = async () => {
     await onReload();
-  };
-
-  const handleEditHardwareSuccess = async () => {
-    await onReload();
-    setEditingItem(null);
   };
 
   const handleImportExcel = async (
@@ -131,58 +116,6 @@ export const HardwareDirectory: React.FC<HardwareDirectoryProps> = ({
     if (sortConfig.direction === "desc")
       return <ChevronDown size={14} className="ml-1" />;
     return null;
-  };
-
-  const handleDeleteHardware = async (item: Hardware) => {
-    const result = await Swal.fire({
-      title: "Delete hardware?",
-      text: `This will permanently delete ${item.ckt_item_number}.`,
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonText: "Delete",
-      cancelButtonText: "Cancel",
-      confirmButtonColor: "#dc2626",
-      cancelButtonColor: "#64748b",
-      reverseButtons: true,
-    });
-
-    if (!result.isConfirmed) return;
-
-    try {
-      setDeletingHardwareId(item.id);
-      await deleteHardware(item.id);
-      onHardwareItemsChange((prev) =>
-        prev.filter((hardwareItem) => hardwareItem.id !== item.id),
-      );
-      const remainingVisibleItems = sortedItems.length - 1;
-      const nextTotalPages = Math.max(
-        1,
-        Math.ceil(remainingVisibleItems / HARDWARE_ITEMS_PER_PAGE),
-      );
-      if (currentPage > nextTotalPages) {
-        setCurrentPage(nextTotalPages);
-      }
-      setSelectedItem((prev) => (prev?.id === item.id ? null : prev));
-      void Swal.fire({
-        title: "Deleted",
-        text: `${item.ckt_item_number} has been deleted.`,
-        icon: "success",
-        timer: 1800,
-        showConfirmButton: false,
-      });
-    } catch (err) {
-      console.error("Failed to delete hardware:", err);
-      void Swal.fire({
-        title: "Delete failed",
-        text:
-          err instanceof Error
-            ? err.message
-            : "Failed to delete hardware item.",
-        icon: "error",
-      });
-    } finally {
-      setDeletingHardwareId(null);
-    }
   };
 
   if (error) {
@@ -346,14 +279,11 @@ export const HardwareDirectory: React.FC<HardwareDirectoryProps> = ({
                   </th>
                   <th
                     className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer hover:text-purple-600 transition-colors"
-                    onClick={() => handleSort("date_created")}
+                    onClick={() => handleSort("created_at")}
                   >
                     <div className="flex items-center">
-                      Created At {renderSortIcon("date_created")}
+                      Created At {renderSortIcon("created_at")}
                     </div>
-                  </th>
-                  <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">
-                    Actions
                   </th>
                 </tr>
               </thead>
@@ -364,12 +294,12 @@ export const HardwareDirectory: React.FC<HardwareDirectoryProps> = ({
                     className="hover:bg-gray-50/50 transition-colors"
                   >
                     <td className="px-6 py-4 text-sm font-medium">
-                      <button
-                        onClick={() => setSelectedItem(item)}
-                        className="text-purple-600 hover:text-purple-800 font-semibold hover:underline transition-colors cursor-pointer"
+                      <Link
+                        href={`/hardware/${item.id}`}
+                        className="text-purple-600 hover:text-purple-800 font-semibold hover:underline transition-colors"
                       >
                         {item.ckt_item_number}
-                      </button>
+                      </Link>
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-600">
                       {item.hardware_type}
@@ -384,37 +314,7 @@ export const HardwareDirectory: React.FC<HardwareDirectoryProps> = ({
                       {item.date_tested || "—"}
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-600">
-                      {item.date_created}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-right">
-                      <div className="flex justify-end gap-2">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSelectedItem(null);
-                            setEditingItem(item);
-                          }}
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-md text-blue-600 transition-colors hover:bg-blue-50 hover:text-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-                          aria-label={`Edit ${item.ckt_item_number}`}
-                          title="Edit hardware"
-                        >
-                          <Pencil size={16} />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => void handleDeleteHardware(item)}
-                          disabled={deletingHardwareId === item.id}
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-md text-red-600 transition-colors hover:bg-red-50 hover:text-red-800 focus:outline-none focus:ring-2 focus:ring-red-500/30 disabled:cursor-not-allowed disabled:opacity-60"
-                          aria-label={`Delete ${item.ckt_item_number}`}
-                          title="Delete hardware"
-                        >
-                          {deletingHardwareId === item.id ? (
-                            <Loader2 size={16} className="animate-spin" />
-                          ) : (
-                            <Trash2 size={16} />
-                          )}
-                        </button>
-                      </div>
+                      {item.created_at}
                     </td>
                   </tr>
                 ))}
@@ -494,24 +394,10 @@ export const HardwareDirectory: React.FC<HardwareDirectoryProps> = ({
         </div>
       </div>
       <AnimatePresence>
-        {selectedItem && (
-          <HardwareDetailModal
-            item={selectedItem}
-            onClose={() => setSelectedItem(null)}
-          />
-        )}
         {isAddModalOpen && (
           <AddHardwareModal
             onClose={() => setIsAddModalOpen(false)}
             onSuccess={handleAddHardwareSuccess}
-          />
-        )}
-        {editingItem && (
-          <AddHardwareModal
-            hardware={editingItem}
-            onClose={() => setEditingItem(null)}
-            onImagesChanged={onReload}
-            onSuccess={handleEditHardwareSuccess}
           />
         )}
       </AnimatePresence>

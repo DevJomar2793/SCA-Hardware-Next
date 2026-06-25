@@ -3,7 +3,12 @@ import {
   Hardware,
   UpdateHardwarePayload,
 } from "@/types/hardware";
-import { EmployeeDetails } from "@/types/employee";
+import {
+  AddEmployeePayload,
+  EmployeeDetails,
+  UpdateEmployeePayload,
+} from "@/types/employee";
+import { HardwareAssignment } from "@/types/assignment";
 
 export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000";
@@ -24,8 +29,81 @@ export async function fetchHardwareList(): Promise<Hardware[]> {
   return response.json();
 }
 
+export async function fetchHardwareById(
+  hardwareId: number | string,
+): Promise<Hardware> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/hardware-by-id/${hardwareId}`,
+  );
+  await assertOk(response);
+
+  return response.json();
+}
+
 export async function fetchEmployeeList(): Promise<EmployeeDetails[]> {
   const response = await fetch(`${API_BASE_URL}/api/v1/employee-list`);
+  await assertOk(response);
+
+  return response.json();
+}
+
+export async function fetchHardwareAssignmentList(): Promise<
+  HardwareAssignment[]
+> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/assign-hardware-list`);
+  await assertOk(response);
+
+  return response.json();
+}
+
+export async function fetchEmployeeById(
+  employeeId: number | string,
+): Promise<EmployeeDetails> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/employee-by-id/${employeeId}`,
+  );
+  await assertOk(response);
+
+  return response.json();
+}
+
+export async function addEmployee(
+  employeeData: AddEmployeePayload,
+): Promise<EmployeeDetails> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/add-employee`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(employeeData),
+  });
+  await assertOk(response);
+
+  return response.json();
+}
+
+export async function updateEmployee(
+  employeeId: number | string,
+  employeeData: UpdateEmployeePayload,
+): Promise<EmployeeDetails> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/employee/${employeeId}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(employeeData),
+  });
+  await assertOk(response);
+
+  return response.json();
+}
+
+export async function deleteEmployee(
+  employeeId: number | string,
+): Promise<EmployeeDetails> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/employee/${employeeId}`, {
+    method: "DELETE",
+  });
   await assertOk(response);
 
   return response.json();
@@ -136,4 +214,4 @@ export async function uploadHardwareImages(
   return data.uploaded_files;
 }
 
-export type { EmployeeDetails, Hardware };
+export type { EmployeeDetails, Hardware, HardwareAssignment };

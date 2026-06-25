@@ -3,6 +3,11 @@ from sqlalchemy.orm import relationship
 from database import Base
 from datetime import datetime
 
+
+def current_timestamp() -> str:
+    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+
 class Hardware(Base):
     __tablename__ = "hardware_table"
 
@@ -28,8 +33,14 @@ class Hardware(Base):
     price_peso = Column(Float, nullable=True)
     date_of_arrival = Column(String, nullable=True)
     new_or_used = Column(String)
-    date_created = Column(String, default=lambda: datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    created_at = Column(String, default=current_timestamp)
+    updated_at = Column(String, default=current_timestamp, onupdate=current_timestamp)
     image_objects = relationship("HardwareImage", back_populates="hardware", cascade="all, delete-orphan")
+    assign_hardware_details = relationship(
+        "AssignHardwareDetails",
+        back_populates="hardware",
+        cascade="all, delete-orphan",
+    )
 
     @property
     def images(self):
@@ -57,7 +68,36 @@ class EmployeeDetails(Base):
     date_hired = Column(String, nullable=True)
     status = Column(String, nullable=True)
     notes = Column(String, nullable=True)
-    date_created = Column(String, default=lambda: datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    created_at = Column(String, default=current_timestamp)
+    updated_at = Column(String, default=current_timestamp, onupdate=current_timestamp)
+    assign_hardware_details = relationship(
+        "AssignHardwareDetails",
+        back_populates="employee",
+        cascade="all, delete-orphan",
+    )
+    
+    @property
+    def name(self):
+        return f"{self.first_name} {self.last_name}"
+
+class AssignHardwareDetails(Base):
+    __tablename__ = "assign_hardware_details"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    date_assigned = Column(String, nullable=False)
+    date_returned = Column(String, nullable=True)
+    status = Column(String, nullable=False)
+    history = Column(String, nullable=True)
+    notes = Column(String, nullable=True)
+    created_at = Column(String, default=current_timestamp)
+    updated_at = Column(String, default=current_timestamp, onupdate=current_timestamp)
+
+    employee_details_id = Column(Integer, ForeignKey("employee_details.id"), nullable=False)
+    hardware_id = Column(Integer, ForeignKey("hardware_table.id"), nullable=False)
+
+    employee = relationship("EmployeeDetails", back_populates="assign_hardware_details")
+    hardware = relationship("Hardware", back_populates="assign_hardware_details")
+    
     
     
  
