@@ -1,12 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { DeploymentDirectory } from "@/components/DeploymentDirectory";
+import { EmployeeDirectory } from "@/components/EmployeeDirectory";
 import { fetchEmployeeList } from "@/services/api";
 import { EmployeeDetails } from "@/types/employee";
 import Swal from "sweetalert2";
 
-export default function DeploymentPage() {
+export default function EmployeePage() {
   const [employees, setEmployees] = useState<EmployeeDetails[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -51,7 +51,7 @@ export default function DeploymentPage() {
   }, []);
 
   return (
-    <DeploymentDirectory
+    <EmployeeDirectory
       employees={employees}
       isLoading={isLoading}
       error={error}

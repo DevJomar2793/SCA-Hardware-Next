@@ -45,7 +45,7 @@ interface DeploymentDirectoryProps {
   onReload: () => Promise<void>;
 }
 
-export function DeploymentDirectory({
+export function EmployeeDirectory({
   employees,
   isLoading,
   error,
