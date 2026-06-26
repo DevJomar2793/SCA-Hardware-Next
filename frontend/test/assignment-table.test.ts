@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   filterUnassignedEmployees,
+  getActiveAssignedHardwareIds,
   getAssignedEmployeeIds,
   groupActiveAssignmentsByEmployee,
 } from "@/lib/assignment-table";
@@ -117,5 +118,24 @@ describe("assignment table helpers", () => {
     );
 
     expect(unassignedEmployees).toEqual([employees[0]]);
+  });
+
+  it("returns only active assigned hardware ids", () => {
+    const activeHardwareIds = getActiveAssignedHardwareIds([
+      makeAssignment({ id: 10, hardware_id: 100 }),
+      makeAssignment({
+        id: 11,
+        hardware_id: 101,
+        date_returned: "2026-06-26",
+        status: "Returned",
+      }),
+      makeAssignment({
+        id: 12,
+        hardware_id: 102,
+        status: "returned",
+      }),
+    ]);
+
+    expect(activeHardwareIds).toEqual(new Set([100]));
   });
 });

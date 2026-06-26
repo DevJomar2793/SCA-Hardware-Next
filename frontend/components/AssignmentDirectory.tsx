@@ -236,12 +236,21 @@ export function AssignmentDirectory({
                       {getEmployeeDepartment(assignmentGroup)}
                     </p>
                   </div>
-                  <Link
-                    href={`/assignment/${assignmentGroup.assignmentId}/hardware`}
-                    className="mt-5 inline-flex w-full items-center justify-center rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                  >
-                    View Deployed Hardware
-                  </Link>
+                  <div className="mt-5 flex flex-col gap-2">
+                    <Link
+                      href={`/assignment/${assignmentGroup.assignmentId}/hardware`}
+                      className="inline-flex w-full items-center justify-center rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                    >
+                      View Deployed Hardware
+                    </Link>
+                    <Link
+                      href={`/assignment/employee/${assignmentGroup.employee_details_id}/hardware`}
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-white px-4 py-2.5 text-sm font-semibold text-blue-700 ring-1 ring-inset ring-blue-200 transition hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                    >
+                      <Plus size={16} />
+                      Add Hardware
+                    </Link>
+                  </div>
                 </div>
               </article>
             );

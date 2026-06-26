@@ -49,6 +49,16 @@ export function getAssignedEmployeeIds(
   return new Set(assignmentGroups.map((group) => group.employee_details_id));
 }
 
+export function getActiveAssignedHardwareIds(
+  assignments: HardwareAssignment[],
+): Set<number> {
+  return new Set(
+    assignments
+      .filter(isActiveAssignment)
+      .map((assignment) => assignment.hardware_id),
+  );
+}
+
 export function filterUnassignedEmployees(
   employees: EmployeeDetails[],
   assignedEmployeeIds: Set<number>,

@@ -7,9 +7,12 @@ import { ArrowLeft, Filter, Loader2, Search } from "lucide-react";
 import {
   assignHardware,
   fetchEmployeeById,
+  fetchHardwareAssignmentList,
   fetchHardwareList,
 } from "@/services/api";
+import { getActiveAssignedHardwareIds } from "@/lib/assignment-table";
 import { getEmployeeFullName } from "@/lib/employee-table";
+import { HardwareAssignment } from "@/types/assignment";
 import { Hardware } from "@/types/hardware";
 import { EmployeeDetails } from "@/types/employee";
 
@@ -52,6 +55,7 @@ export default function EmployeeHardwareSelectionPage() {
   const employeeId = params.employeeId;
   const [employee, setEmployee] = useState<EmployeeDetails | null>(null);
   const [hardwareItems, setHardwareItems] = useState<Hardware[]>([]);
+  const [assignments, setAssignments] = useState<HardwareAssignment[]>([]);
   const [assignedHardwareItems, setAssignedHardwareItems] = useState<
     Hardware[]
   >([]);
@@ -73,18 +77,21 @@ export default function EmployeeHardwareSelectionPage() {
     try {
       setIsLoading(true);
       setError(null);
-      const [employeeData, hardwareData] = await Promise.all([
+      const [employeeData, hardwareData, assignmentData] = await Promise.all([
         fetchEmployeeById(employeeId),
         fetchHardwareList(),
+        fetchHardwareAssignmentList(),
       ]);
       setEmployee(employeeData);
       setHardwareItems(hardwareData);
+      setAssignments(assignmentData);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Failed to fetch hardware list.",
       );
       setEmployee(null);
       setHardwareItems([]);
+      setAssignments([]);
     } finally {
       setIsLoading(false);
     }
@@ -110,18 +117,29 @@ export default function EmployeeHardwareSelectionPage() {
     [hardwareItems],
   );
 
+  const activeAssignedHardwareIds = useMemo(
+    () => getActiveAssignedHardwareIds(assignments),
+    [assignments],
+  );
+
+  const availableHardwareItems = useMemo(
+    () =>
+      hardwareItems.filter((item) => !activeAssignedHardwareIds.has(item.id)),
+    [activeAssignedHardwareIds, hardwareItems],
+  );
+
   const filteredHardwareItems = useMemo(() => {
     const normalizedSearchTerm = searchTerm.trim().toUpperCase();
 
-    return hardwareItems.filter((item) => {
+    return availableHardwareItems.filter((item) => {
       const matchesSearch =
         normalizedSearchTerm === "" ||
         [
-        item.ckt_item_number,
-        item.hardware_type,
-        item.manufacturer,
-        item.model_number,
-        item.serial_number,
+          item.ckt_item_number,
+          item.hardware_type,
+          item.manufacturer,
+          item.model_number,
+          item.serial_number,
         ].some((value) => value?.toUpperCase().includes(normalizedSearchTerm));
       const matchesHardwareType =
         hardwareTypeFilter === "All" ||
@@ -129,7 +147,7 @@ export default function EmployeeHardwareSelectionPage() {
 
       return matchesSearch && matchesHardwareType;
     });
-  }, [hardwareItems, hardwareTypeFilter, searchTerm]);
+  }, [availableHardwareItems, hardwareTypeFilter, searchTerm]);
 
   const totalPages = Math.ceil(
     filteredHardwareItems.length / ASSIGN_HARDWARE_ITEMS_PER_PAGE,
