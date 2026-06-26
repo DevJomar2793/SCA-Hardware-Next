@@ -78,34 +78,11 @@ export async function fetchAssignedHardwareByAssignmentId(
   assignmentId: number | string,
 ): Promise<Hardware[]> {
   const response = await fetch(
-    `${API_BASE_URL}/api/v1/assign-hardware/${assignmentId}`,
+    `${API_BASE_URL}/api/v1/assign-hardware/${assignmentId}/hardware-items`,
   );
   await assertOk(response);
 
-  const data = await response.json();
-
-  if (Array.isArray(data)) {
-    return data;
-  }
-
-  if (Array.isArray(data.hardware)) {
-    return data.hardware;
-  }
-
-  if (Array.isArray(data.hardware_items)) {
-    return data.hardware_items;
-  }
-
-  if (data.hardware && typeof data.hardware === "object") {
-    return [data.hardware];
-  }
-
-  if (typeof data.hardware_id === "number") {
-    const hardware = await fetchHardwareById(data.hardware_id);
-    return [hardware];
-  }
-
-  return [];
+  return response.json();
 }
 
 export async function fetchEmployeeById(

@@ -140,6 +140,33 @@ def read_hardware_assignments(
 
 
 @router.get(
+    "/assign-hardware/{assignment_id}/hardware-items",
+    response_model=List[schemas.Hardware],
+)
+def read_hardware_items_for_assignment(
+    assignment_id: int,
+    db: Session = Depends(get_db),
+):
+    db_assignment = get_assignment_or_404(assignment_id, db)
+
+    return (
+        db.query(models.Hardware)
+        .join(
+            models.AssignHardwareDetails,
+            models.AssignHardwareDetails.hardware_id == models.Hardware.id,
+        )
+        .filter(
+            models.AssignHardwareDetails.employee_details_id
+            == db_assignment.employee_details_id,
+            models.AssignHardwareDetails.date_returned.is_(None),
+            func.lower(models.AssignHardwareDetails.status) != RETURNED_STATUS,
+        )
+        .order_by(models.AssignHardwareDetails.id.desc())
+        .all()
+    )
+
+
+@router.get(
     "/assign-hardware/{assignment_id}",
     response_model=schemas.AssignHardwareDetails,
 )

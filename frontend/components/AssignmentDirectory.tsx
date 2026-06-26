@@ -4,6 +4,12 @@ import { useMemo, useState } from "react";
 import { HardwareAssignment } from "@/types/assignment";
 import { EmployeeDetails } from "@/types/employee";
 import { getEmployeeFullName } from "@/lib/employee-table";
+import {
+  AssignmentCardGroup,
+  filterUnassignedEmployees,
+  getAssignedEmployeeIds,
+  groupActiveAssignmentsByEmployee,
+} from "@/lib/assignment-table";
 
 interface AssignmentDirectoryProps {
   assignments: HardwareAssignment[];
@@ -35,10 +41,6 @@ const getStatusStyle = (status: string | null | undefined) => {
   return "bg-emerald-50 text-emerald-700 ring-emerald-600/20";
 };
 
-const isActiveAssignment = (assignment: HardwareAssignment) =>
-  !assignment.date_returned &&
-  assignment.status.trim().toLowerCase() !== "returned";
-
 export function AssignmentDirectory({
   assignments,
   employees,
@@ -66,11 +68,16 @@ export function AssignmentDirectory({
     [employees],
   );
 
-  const filteredAssignments = useMemo(() => {
+  const assignmentGroups = useMemo(
+    () => groupActiveAssignmentsByEmployee(assignments),
+    [assignments],
+  );
+
+  const filteredAssignmentGroups = useMemo(() => {
     const normalizedSearchTerm = searchTerm.trim().toUpperCase();
 
-    return assignments.filter((assignment) => {
-      const employee = employeeById.get(assignment.employee_details_id);
+    return assignmentGroups.filter((assignmentGroup) => {
+      const employee = employeeById.get(assignmentGroup.employee_details_id);
       const employeeName = employee ? getEmployeeFullName(employee) : "";
       const matchesSearch =
         normalizedSearchTerm === "" ||
@@ -80,52 +87,43 @@ export function AssignmentDirectory({
 
       return matchesSearch && matchesDepartment;
     });
-  }, [assignments, departmentFilter, employeeById, searchTerm]);
+  }, [assignmentGroups, departmentFilter, employeeById, searchTerm]);
 
   const assignedEmployeeIds = useMemo(
-    () =>
-      new Set(
-        assignments
-          .filter(isActiveAssignment)
-          .map((assignment) => assignment.employee_details_id),
-      ),
-    [assignments],
+    () => getAssignedEmployeeIds(assignmentGroups),
+    [assignmentGroups],
   );
 
-  const filteredUnassignedEmployees = useMemo(() => {
-    const normalizedSearchTerm = searchTerm.trim().toUpperCase();
-
-    return employees.filter((employee) => {
-      if (assignedEmployeeIds.has(employee.id)) return false;
-
-      const employeeName = getEmployeeFullName(employee);
-      const matchesSearch =
-        normalizedSearchTerm === "" ||
-        employeeName.toUpperCase().includes(normalizedSearchTerm);
-      const matchesDepartment =
-        departmentFilter === "All" || employee.department === departmentFilter;
-
-      return matchesSearch && matchesDepartment;
-    });
-  }, [assignedEmployeeIds, departmentFilter, employees, searchTerm]);
+  const filteredUnassignedEmployees = useMemo(
+    () =>
+      filterUnassignedEmployees(
+        employees,
+        assignedEmployeeIds,
+        searchTerm,
+        departmentFilter,
+        getEmployeeFullName,
+      ),
+    [assignedEmployeeIds, departmentFilter, employees, searchTerm],
+  );
 
   const hasVisibleCards =
-    filteredAssignments.length > 0 || filteredUnassignedEmployees.length > 0;
+    filteredAssignmentGroups.length > 0 ||
+    filteredUnassignedEmployees.length > 0;
 
-  const getEmployeeLabel = (assignment: HardwareAssignment) => {
-    const employee = employeeById.get(assignment.employee_details_id);
-    if (!employee) return `Employee #${assignment.employee_details_id}`;
+  const getEmployeeLabel = (assignmentGroup: AssignmentCardGroup) => {
+    const employee = employeeById.get(assignmentGroup.employee_details_id);
+    if (!employee) return `Employee #${assignmentGroup.employee_details_id}`;
 
     return getEmployeeFullName(employee) || `Employee #${employee.id}`;
   };
 
-  const getEmployeePosition = (assignment: HardwareAssignment) => {
-    const employee = employeeById.get(assignment.employee_details_id);
+  const getEmployeePosition = (assignmentGroup: AssignmentCardGroup) => {
+    const employee = employeeById.get(assignmentGroup.employee_details_id);
     return employee?.position || "Position unavailable";
   };
 
-  const getEmployeeDepartment = (assignment: HardwareAssignment) => {
-    const employee = employeeById.get(assignment.employee_details_id);
+  const getEmployeeDepartment = (assignmentGroup: AssignmentCardGroup) => {
+    const employee = employeeById.get(assignmentGroup.employee_details_id);
     return employee?.department || "Department unavailable";
   };
 
@@ -205,12 +203,12 @@ export function AssignmentDirectory({
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-          {filteredAssignments.map((assignment) => {
-            const name = getEmployeeLabel(assignment);
+          {filteredAssignmentGroups.map((assignmentGroup) => {
+            const name = getEmployeeLabel(assignmentGroup);
 
             return (
               <article
-                key={assignment.id}
+                key={assignmentGroup.employee_details_id}
                 className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition-shadow hover:shadow-md"
               >
                 <div className="h-16 bg-slate-100" />
@@ -221,10 +219,10 @@ export function AssignmentDirectory({
                     </div>
                     <span
                       className={`mb-1 inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset ${getStatusStyle(
-                        assignment.status,
+                        "Assigned",
                       )}`}
                     >
-                      {displayValue(assignment.status)}
+                      {assignmentGroup.assignments.length} deployed
                     </span>
                   </div>
                   <div className="text-left">
@@ -232,14 +230,14 @@ export function AssignmentDirectory({
                       {name}
                     </h2>
                     <p className="mt-1 truncate text-sm font-medium text-slate-500">
-                      {getEmployeePosition(assignment)}
+                      {getEmployeePosition(assignmentGroup)}
                     </p>
                     <p className="mt-1 truncate text-xs font-medium uppercase tracking-wide text-slate-400">
-                      {getEmployeeDepartment(assignment)}
+                      {getEmployeeDepartment(assignmentGroup)}
                     </p>
                   </div>
                   <Link
-                    href={`/assignment/${assignment.id}/hardware`}
+                    href={`/assignment/${assignmentGroup.assignmentId}/hardware`}
                     className="mt-5 inline-flex w-full items-center justify-center rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                   >
                     View Deployed Hardware
