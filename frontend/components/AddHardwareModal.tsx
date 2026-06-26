@@ -365,16 +365,16 @@ export const AddHardwareModal: React.FC<AddHardwareModalProps> = ({
       }
 
       await onSuccess();
+      const hardwareName =
+        savedHardware.model_number ||
+        savedHardware.ckt_item_number ||
+        "hardware";
       void Swal.fire({
-        toast: true,
-        position: "top-end",
         icon: "success",
-        title: isEditMode
-          ? "Hardware updated successfully"
-          : "Hardware added successfully",
+        title: isEditMode ? "Hardware updated" : "Hardware added",
+        text: `You successfully ${isEditMode ? "updated" : "added"} "${hardwareName}"`,
         showConfirmButton: false,
-        timer: 3000,
-        timerProgressBar: true,
+        timer: 1800,
       });
       onClose();
     } catch (err) {

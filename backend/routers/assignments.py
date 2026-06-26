@@ -141,7 +141,7 @@ def read_hardware_assignments(
 
 @router.get(
     "/assign-hardware/{assignment_id}/hardware-items",
-    response_model=List[schemas.Hardware],
+    response_model=List[schemas.DeployedHardwareItem],
 )
 def read_hardware_items_for_assignment(
     assignment_id: int,
@@ -149,12 +149,8 @@ def read_hardware_items_for_assignment(
 ):
     db_assignment = get_assignment_or_404(assignment_id, db)
 
-    return (
-        db.query(models.Hardware)
-        .join(
-            models.AssignHardwareDetails,
-            models.AssignHardwareDetails.hardware_id == models.Hardware.id,
-        )
+    active_assignments = (
+        db.query(models.AssignHardwareDetails)
         .filter(
             models.AssignHardwareDetails.employee_details_id
             == db_assignment.employee_details_id,
@@ -164,6 +160,14 @@ def read_hardware_items_for_assignment(
         .order_by(models.AssignHardwareDetails.id.desc())
         .all()
     )
+
+    return [
+        {
+            "assignment": assignment,
+            "hardware": assignment.hardware,
+        }
+        for assignment in active_assignments
+    ]
 
 
 @router.get(
@@ -242,3 +246,5 @@ def delete_hardware_assignment(
     db.delete(db_assignment)
     db.commit()
     return db_assignment
+
+

@@ -42,13 +42,11 @@ export default function HardwarePage() {
 
     window.sessionStorage.removeItem("hardware-delete-toast");
     void Swal.fire({
-      toast: true,
-      position: "top-end",
       icon: "success",
-      title: message,
+      title: "Hardware deleted",
+      text: message,
       showConfirmButton: false,
-      timer: 3000,
-      timerProgressBar: true,
+      timer: 1800,
     });
   }, []);
 

@@ -10,6 +10,7 @@ import {
 } from "@/types/employee";
 import {
   AssignHardwarePayload,
+  DeployedHardwareItem,
   HardwareAssignment,
 } from "@/types/assignment";
 
@@ -76,9 +77,23 @@ export async function assignHardware(
 
 export async function fetchAssignedHardwareByAssignmentId(
   assignmentId: number | string,
-): Promise<Hardware[]> {
+): Promise<DeployedHardwareItem[]> {
   const response = await fetch(
     `${API_BASE_URL}/api/v1/assign-hardware/${assignmentId}/hardware-items`,
+  );
+  await assertOk(response);
+
+  return response.json();
+}
+
+export async function returnHardwareAssignment(
+  assignmentId: number | string,
+): Promise<HardwareAssignment> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/assign-hardware/${assignmentId}/return`,
+    {
+      method: "PUT",
+    },
   );
   await assertOk(response);
 

@@ -119,16 +119,15 @@ export const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
         await addEmployee(payload);
       }
       await onSuccess();
+      const employeeName = [payload.first_name, payload.last_name]
+        .filter(Boolean)
+        .join(" ");
       void Swal.fire({
-        toast: true,
-        position: "top-end",
         icon: "success",
-        title: isEditMode
-          ? "Employee updated successfully"
-          : "Employee added successfully",
+        title: isEditMode ? "Employee updated" : "Employee added",
+        text: `You successfully ${isEditMode ? "updated" : "added"} "${employeeName}"`,
         showConfirmButton: false,
-        timer: 3000,
-        timerProgressBar: true,
+        timer: 1800,
       });
       onClose();
     } catch (err) {

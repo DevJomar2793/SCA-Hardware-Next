@@ -40,13 +40,11 @@ export default function EmployeePage() {
 
     window.sessionStorage.removeItem("employee-delete-toast");
     void Swal.fire({
-      toast: true,
-      position: "top-end",
       icon: "success",
-      title: message,
+      title: "Employee deleted",
+      text: message,
       showConfirmButton: false,
-      timer: 3000,
-      timerProgressBar: true,
+      timer: 1800,
     });
   }, []);
 

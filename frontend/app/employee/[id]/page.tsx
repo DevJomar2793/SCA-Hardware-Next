@@ -19,6 +19,7 @@ import { AnimatePresence } from "framer-motion";
 import { deleteEmployee, fetchEmployeeById } from "@/services/api";
 import { AddEmployeeModal } from "@/components/AddEmployeeModal";
 import { EmployeeDetails } from "@/types/employee";
+import Swal from "sweetalert2";
 
 const statusStyles: Record<string, string> = {
   Active: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
@@ -132,24 +133,33 @@ export default function EmployeeDetailPage() {
   const handleDeleteEmployee = async () => {
     if (!employee) return;
 
-    const isConfirmed = window.confirm(
-      `This will permanently delete ${getFullName(employee)}.`,
-    );
+    const employeeName = getFullName(employee);
+    const result = await Swal.fire({
+      title: "Delete employee?",
+      text: `This will permanently delete ${employeeName}.`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Delete",
+      cancelButtonText: "Cancel",
+      confirmButtonColor: "#dc2626",
+    });
 
-    if (!isConfirmed) return;
+    if (!result.isConfirmed) return;
 
     try {
       setIsDeleting(true);
       await deleteEmployee(employee.id);
       window.sessionStorage.setItem(
         "employee-delete-toast",
-        "Employee deleted successfully",
+        `You successfully deleted "${employeeName}"`,
       );
       router.push("/employee");
     } catch (err) {
-      window.alert(
-        err instanceof Error ? err.message : "Failed to delete employee.",
-      );
+      void Swal.fire({
+        title: "Delete failed",
+        text: err instanceof Error ? err.message : "Failed to delete employee.",
+        icon: "error",
+      });
     } finally {
       setIsDeleting(false);
     }

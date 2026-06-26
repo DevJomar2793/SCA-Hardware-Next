@@ -1,3 +1,5 @@
+import { Hardware } from "./hardware";
+
 export interface HardwareAssignment {
   id: number;
   employee_details_id: number;
@@ -19,4 +21,9 @@ export interface AssignHardwarePayload {
   date_returned?: string | null;
   history?: string | null;
   notes?: string | null;
+}
+
+export interface DeployedHardwareItem {
+  assignment: HardwareAssignment;
+  hardware: Hardware;
 }

@@ -3,9 +3,13 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { ArrowLeft, Loader2 } from "lucide-react";
-import { fetchAssignedHardwareByAssignmentId } from "@/services/api";
-import { Hardware } from "@/types/hardware";
+import { ArrowLeft, Loader2, MinusCircle } from "lucide-react";
+import Swal from "sweetalert2";
+import {
+  fetchAssignedHardwareByAssignmentId,
+  returnHardwareAssignment,
+} from "@/services/api";
+import { DeployedHardwareItem } from "@/types/assignment";
 
 const displayValue = (value: string | number | null | undefined) =>
   value === null || value === undefined || value === "" ? "-" : String(value);
@@ -41,9 +45,15 @@ const getConditionStyle = (condition: string | null | undefined) => {
 export default function AssignmentHardwarePage() {
   const params = useParams<{ assignmentId: string }>();
   const assignmentId = params.assignmentId;
-  const [hardwareItems, setHardwareItems] = useState<Hardware[]>([]);
+  const [deployedItems, setDeployedItems] = useState<DeployedHardwareItem[]>(
+    [],
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showRemoveActions, setShowRemoveActions] = useState(false);
+  const [returningAssignmentId, setReturningAssignmentId] = useState<
+    number | null
+  >(null);
 
   const loadAssignedHardware = useCallback(async () => {
     if (!assignmentId || Number.isNaN(Number(assignmentId))) {
@@ -56,18 +66,51 @@ export default function AssignmentHardwarePage() {
       setIsLoading(true);
       setError(null);
       const data = await fetchAssignedHardwareByAssignmentId(assignmentId);
-      setHardwareItems(data);
+      setDeployedItems(data);
     } catch (err) {
       setError(
         err instanceof Error
           ? err.message
           : "Failed to fetch deployed hardware.",
       );
-      setHardwareItems([]);
+      setDeployedItems([]);
     } finally {
       setIsLoading(false);
     }
   }, [assignmentId]);
+
+  const handleReturnHardware = async (assignmentToReturnId: number) => {
+    const itemToReturn = deployedItems.find(
+      (item) => item.assignment.id === assignmentToReturnId,
+    );
+    const modelName = itemToReturn?.hardware.model_number || "hardware";
+
+    try {
+      setReturningAssignmentId(assignmentToReturnId);
+      setError(null);
+      await returnHardwareAssignment(assignmentToReturnId);
+      setDeployedItems((currentItems) =>
+        currentItems.filter(
+          (item) => item.assignment.id !== assignmentToReturnId,
+        ),
+      );
+      void Swal.fire({
+        icon: "success",
+        title: "Hardware unassigned",
+        text: `You successfully unassigned "${modelName}"`,
+        timer: 1800,
+        showConfirmButton: false,
+      });
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to remove deployed hardware.",
+      );
+    } finally {
+      setReturningAssignmentId(null);
+    }
+  };
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -105,13 +148,25 @@ export default function AssignmentHardwarePage() {
                 Hardware Details
               </h2>
               <p className="mt-1 text-xs text-slate-500">
-                {hardwareItems.length} deployed item
-                {hardwareItems.length === 1 ? "" : "s"}
+                {deployedItems.length} deployed item
+                {deployedItems.length === 1 ? "" : "s"}
               </p>
             </div>
-            <span className="rounded-full bg-purple-50 px-3 py-1 text-xs font-semibold text-purple-700 ring-1 ring-inset ring-purple-600/20">
-              Assignment #{displayValue(assignmentId)}
-            </span>
+            <div className="flex flex-wrap items-center gap-2">
+              {!isLoading && deployedItems.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setShowRemoveActions((current) => !current)}
+                  className="inline-flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-xs font-semibold text-red-700 ring-1 ring-inset ring-red-200 transition hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                >
+                  <MinusCircle size={15} />
+                  Remove Hardware
+                </button>
+              )}
+              <span className="rounded-full bg-purple-50 px-3 py-1 text-xs font-semibold text-purple-700 ring-1 ring-inset ring-purple-600/20">
+                Assignment #{displayValue(assignmentId)}
+              </span>
+            </div>
           </div>
 
           {isLoading ? (
@@ -119,7 +174,7 @@ export default function AssignmentHardwarePage() {
               <Loader2 className="mb-4 h-10 w-10 animate-spin text-purple-600" />
               <p className="font-medium">Fetching deployed hardware...</p>
             </div>
-          ) : error ? (
+          ) : error && deployedItems.length === 0 ? (
             <div className="mx-auto flex min-h-72 max-w-md flex-col items-center justify-center p-8 text-center">
               <p className="mb-2 font-semibold text-red-700">
                 Error loading deployed hardware
@@ -133,7 +188,7 @@ export default function AssignmentHardwarePage() {
                 Retry
               </button>
             </div>
-          ) : hardwareItems.length === 0 ? (
+          ) : deployedItems.length === 0 ? (
             <div className="flex min-h-72 items-center justify-center p-8 text-center">
               <p className="text-sm font-medium text-slate-500">
                 No deployed hardware found for this assignment.
@@ -141,7 +196,16 @@ export default function AssignmentHardwarePage() {
             </div>
           ) : (
             <div className="overflow-auto">
-              <table className="w-full min-w-[1100px] border-collapse text-left">
+              {error && (
+                <div className="border-b border-red-100 bg-red-50 px-6 py-3 text-sm font-medium text-red-700">
+                  {error}
+                </div>
+              )}
+              <table
+                className={`w-full border-collapse text-left ${
+                  showRemoveActions ? "min-w-[1220px]" : "min-w-[1100px]"
+                }`}
+              >
                 <thead>
                   <tr className="sticky top-0 z-10 border-b border-gray-100 bg-gray-50">
                     <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-500">
@@ -171,60 +235,87 @@ export default function AssignmentHardwarePage() {
                     <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-500">
                       Created At
                     </th>
+                    {showRemoveActions && (
+                      <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-500">
+                        Actions
+                      </th>
+                    )}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {hardwareItems.map((item) => (
-                    <tr
-                      key={item.id}
-                      className="transition-colors hover:bg-gray-50/50"
-                    >
-                      <td className="px-6 py-4 text-sm font-medium">
-                        <Link
-                          href={`/hardware/${item.id}`}
-                          className="font-semibold text-purple-600 transition-colors hover:text-purple-800 hover:underline"
-                        >
-                          {displayValue(item.ckt_item_number)}
-                        </Link>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-slate-600">
-                        {displayValue(item.hardware_type)}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-slate-600">
-                        {displayValue(item.manufacturer)}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-slate-600">
-                        {displayValue(item.model_number)}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-slate-600">
-                        {displayValue(item.serial_number)}
-                      </td>
-                      <td className="px-6 py-4 text-sm">
-                        <span
-                          className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset ${getStatusStyle(
-                            item.operational,
-                          )}`}
-                        >
-                          {displayValue(item.operational)}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-sm">
-                        <span
-                          className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset ${getConditionStyle(
-                            item.new_or_used,
-                          )}`}
-                        >
-                          {displayValue(item.new_or_used)}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-slate-600">
-                        {displayValue(item.date_tested)}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-slate-600">
-                        {displayValue(item.created_at)}
-                      </td>
-                    </tr>
-                  ))}
+                  {deployedItems.map((deployedItem) => {
+                    const item = deployedItem.hardware;
+                    const isReturning =
+                      returningAssignmentId === deployedItem.assignment.id;
+
+                    return (
+                      <tr
+                        key={deployedItem.assignment.id}
+                        className="transition-colors hover:bg-gray-50/50"
+                      >
+                        <td className="px-6 py-4 text-sm font-medium">
+                          <Link
+                            href={`/hardware/${item.id}`}
+                            className="font-semibold text-purple-600 transition-colors hover:text-purple-800 hover:underline"
+                          >
+                            {displayValue(item.ckt_item_number)}
+                          </Link>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-slate-600">
+                          {displayValue(item.hardware_type)}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-slate-600">
+                          {displayValue(item.manufacturer)}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-slate-600">
+                          {displayValue(item.model_number)}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-slate-600">
+                          {displayValue(item.serial_number)}
+                        </td>
+                        <td className="px-6 py-4 text-sm">
+                          <span
+                            className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset ${getStatusStyle(
+                              item.operational,
+                            )}`}
+                          >
+                            {displayValue(item.operational)}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-sm">
+                          <span
+                            className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset ${getConditionStyle(
+                              item.new_or_used,
+                            )}`}
+                          >
+                            {displayValue(item.new_or_used)}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-slate-600">
+                          {displayValue(item.date_tested)}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-slate-600">
+                          {displayValue(item.created_at)}
+                        </td>
+                        {showRemoveActions && (
+                          <td className="px-6 py-4 text-sm">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                void handleReturnHardware(
+                                  deployedItem.assignment.id,
+                                )
+                              }
+                              disabled={isReturning}
+                              className="inline-flex min-w-24 items-center justify-center rounded-lg bg-emerald-50 px-3 py-1.5 text-sm font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-600/20 transition-colors hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              {isReturning ? "Removing..." : "Assigned"}
+                            </button>
+                          </td>
+                        )}
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

@@ -30,6 +30,7 @@ import {
 } from "@/services/api";
 import { AddHardwareModal } from "@/components/AddHardwareModal";
 import { Hardware } from "@/types/hardware";
+import Swal from "sweetalert2";
 
 const displayValue = (value: string | number | null | undefined) =>
   value === null || value === undefined || value === "" ? "-" : String(value);
@@ -150,24 +151,35 @@ export default function HardwareDetailPage() {
   const handleDeleteHardware = async () => {
     if (!hardware) return;
 
-    const isConfirmed = window.confirm(
-      `This will permanently delete ${hardware.ckt_item_number}.`,
-    );
+    const result = await Swal.fire({
+      title: "Delete hardware?",
+      text: `This will permanently delete ${hardware.ckt_item_number}.`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Delete",
+      cancelButtonText: "Cancel",
+      confirmButtonColor: "#dc2626",
+    });
 
-    if (!isConfirmed) return;
+    if (!result.isConfirmed) return;
 
     try {
       setIsDeleting(true);
       await deleteHardware(hardware.id);
       window.sessionStorage.setItem(
         "hardware-delete-toast",
-        "Hardware deleted successfully",
+        `You successfully deleted "${hardware.model_number || hardware.ckt_item_number}"`,
       );
       router.push("/hardware");
     } catch (err) {
-      window.alert(
-        err instanceof Error ? err.message : "Failed to delete hardware item.",
-      );
+      void Swal.fire({
+        title: "Delete failed",
+        text:
+          err instanceof Error
+            ? err.message
+            : "Failed to delete hardware item.",
+        icon: "error",
+      });
     } finally {
       setIsDeleting(false);
     }

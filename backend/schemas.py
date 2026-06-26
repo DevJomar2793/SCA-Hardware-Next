@@ -278,3 +278,8 @@ class AssignHardwareDetails(AssignHardwareBase):
 
     class Config:
         from_attributes = True
+
+
+class DeployedHardwareItem(BaseModel):
+    assignment: AssignHardwareDetails
+    hardware: Hardware
