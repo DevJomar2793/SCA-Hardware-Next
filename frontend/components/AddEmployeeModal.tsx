@@ -74,9 +74,12 @@ export const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
     >,
   ) => {
     const { name, value } = e.target;
+    const nextValue =
+      name === "contact_number" ? value.replace(/\D/g, "").slice(0, 11) : value;
+
     setFormData((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: nextValue,
     }));
   };
 
@@ -250,6 +253,9 @@ export const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                     <input
                       required
                       name="contact_number"
+                      type="tel"
+                      inputMode="numeric"
+                      maxLength={11}
                       value={formData.contact_number}
                       onChange={handleChange}
                       className="w-full px-3 py-2 pr-8 border border-gray-200 text-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none"

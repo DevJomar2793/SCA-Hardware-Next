@@ -1,5 +1,6 @@
-import { Filter, Loader2, Search } from "lucide-react";
-import { useMemo } from "react";
+import { CalendarDays, Filter, Loader2, Plus, Search } from "lucide-react";
+import Link from "next/link";
+import { useMemo, useState } from "react";
 import { HardwareAssignment } from "@/types/assignment";
 import { EmployeeDetails } from "@/types/employee";
 import { getEmployeeFullName } from "@/lib/employee-table";
@@ -24,6 +25,16 @@ const getInitials = (name: string) => {
   return initials || "NA";
 };
 
+const displayValue = (value: string | null | undefined) => value || "-";
+
+const getStatusStyle = (status: string | null | undefined) => {
+  if ((status || "").trim().toLowerCase() === "returned") {
+    return "bg-slate-100 text-slate-600 ring-slate-500/20";
+  }
+
+  return "bg-emerald-50 text-emerald-700 ring-emerald-600/20";
+};
+
 export function AssignmentDirectory({
   assignments,
   employees,
@@ -31,10 +42,41 @@ export function AssignmentDirectory({
   error,
   onReload,
 }: AssignmentDirectoryProps) {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [departmentFilter, setDepartmentFilter] = useState("All");
+
   const employeeById = useMemo(
     () => new Map(employees.map((employee) => [employee.id, employee])),
     [employees],
   );
+
+  const departmentOptions = useMemo(
+    () =>
+      [
+        ...new Set(
+          employees
+            .map((employee) => employee.department)
+            .filter((department): department is string => Boolean(department)),
+        ),
+      ].sort(),
+    [employees],
+  );
+
+  const filteredAssignments = useMemo(() => {
+    const normalizedSearchTerm = searchTerm.trim().toUpperCase();
+
+    return assignments.filter((assignment) => {
+      const employee = employeeById.get(assignment.employee_details_id);
+      const employeeName = employee ? getEmployeeFullName(employee) : "";
+      const matchesSearch =
+        normalizedSearchTerm === "" ||
+        employeeName.toUpperCase().includes(normalizedSearchTerm);
+      const matchesDepartment =
+        departmentFilter === "All" || employee?.department === departmentFilter;
+
+      return matchesSearch && matchesDepartment;
+    });
+  }, [assignments, departmentFilter, employeeById, searchTerm]);
 
   const getEmployeeLabel = (assignment: HardwareAssignment) => {
     const employee = employeeById.get(assignment.employee_details_id);
@@ -48,12 +90,24 @@ export function AssignmentDirectory({
     return employee?.position || "Position unavailable";
   };
 
+  const getEmployeeDepartment = (assignment: HardwareAssignment) => {
+    const employee = employeeById.get(assignment.employee_details_id);
+    return employee?.department || "Department unavailable";
+  };
+
   return (
     <div className="min-h-full bg-gray-100 p-8">
-      <div className="mb-8">
+      <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
         <h1 className="text-3xl font-bold text-slate-800">
           Hardware Assignments
         </h1>
+        <button
+          type="button"
+          className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 font-medium text-slate-700 shadow-sm transition-colors hover:bg-gray-50"
+        >
+          <Plus size={18} />
+          Assign Hardware
+        </button>
       </div>
 
       <div className="mb-6 flex flex-wrap items-center gap-4">
@@ -65,16 +119,25 @@ export function AssignmentDirectory({
           <input
             type="text"
             placeholder="Search assignments..."
+            value={searchTerm}
+            onChange={(event) => setSearchTerm(event.target.value)}
             className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-10 pr-4 text-sm text-gray-600 shadow-sm transition-all focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/20"
           />
         </div>
 
         <div className="flex items-center gap-2">
           <Filter size={16} className="text-gray-400" />
-          <select className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-600 shadow-sm outline-none transition-colors hover:bg-gray-50 focus:ring-2 focus:ring-purple-500/20">
-            <option>All Status</option>
-            <option>Assigned</option>
-            <option>Returned</option>
+          <select
+            value={departmentFilter}
+            onChange={(event) => setDepartmentFilter(event.target.value)}
+            className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-600 shadow-sm outline-none transition-colors hover:bg-gray-50 focus:ring-2 focus:ring-purple-500/20"
+          >
+            <option value="All">All Departments</option>
+            {departmentOptions.map((department) => (
+              <option key={department} value={department}>
+                {department}
+              </option>
+            ))}
           </select>
         </div>
       </div>
@@ -104,33 +167,60 @@ export function AssignmentDirectory({
             No hardware assignments found.
           </p>
         </div>
+      ) : filteredAssignments.length === 0 ? (
+        <div className="flex min-h-72 items-center justify-center rounded-xl bg-white p-8 text-center shadow-sm">
+          <p className="text-sm font-medium text-slate-500">
+            No matching assignments found.
+          </p>
+        </div>
       ) : (
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-4">
-          {assignments.map((assignment) => {
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+          {filteredAssignments.map((assignment) => {
             const name = getEmployeeLabel(assignment);
 
             return (
               <article
                 key={assignment.id}
-                className="overflow-hidden rounded-xl bg-white text-center shadow-md shadow-slate-200/70"
+                className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition-shadow hover:shadow-md"
               >
-                <div className="h-20 bg-blue-100" />
-                <div className="px-6 pb-6">
-                  <div className="-mt-10 mb-5 flex justify-center">
-                    <div className="flex h-20 w-20 items-center justify-center rounded-full border-4 border-white bg-blue-600 text-xl font-bold text-white shadow-sm">
+                <div className="h-16 bg-slate-100" />
+                <div className="px-5 pb-5">
+                  <div className="-mt-8 mb-4 flex items-end justify-between gap-3">
+                    <div className="flex h-16 w-16 items-center justify-center rounded-full border-4 border-white bg-blue-600 text-lg font-bold text-white shadow-sm">
                       {getInitials(name)}
                     </div>
+                    <span
+                      className={`mb-1 inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset ${getStatusStyle(
+                        assignment.status,
+                      )}`}
+                    >
+                      {displayValue(assignment.status)}
+                    </span>
                   </div>
-                  <h2 className="text-lg font-bold text-slate-900">{name}</h2>
-                  <p className="mt-2 text-sm font-medium text-slate-500">
-                    {getEmployeePosition(assignment)}
-                  </p>
-                  <button
-                    type="button"
-                    className="mt-5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                  <div className="text-left">
+                    <h2 className="truncate text-lg font-bold text-slate-900">
+                      {name}
+                    </h2>
+                    <p className="mt-1 truncate text-sm font-medium text-slate-500">
+                      {getEmployeePosition(assignment)}
+                    </p>
+                    <p className="mt-1 truncate text-xs font-medium uppercase tracking-wide text-slate-400">
+                      {getEmployeeDepartment(assignment)}
+                    </p>
+                  </div>
+                  <div className="mt-5 flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-600">
+                    <CalendarDays size={16} className="text-slate-400" />
+                    <span className="font-medium">Assigned</span>
+                    <span className="min-w-0 truncate">
+                      {displayValue(assignment.date_assigned)}
+                    </span>
+                  </div>
+                  <Link
+                    href={`/assignment/${assignment.id}/hardware`}
+                    className="mt-5 inline-flex w-full items-center justify-center rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                   >
-                    View Assignment
-                  </button>
+                    View Deployed Hardware
+                  </Link>
                 </div>
               </article>
             );
