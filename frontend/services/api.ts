@@ -8,7 +8,10 @@ import {
   EmployeeDetails,
   UpdateEmployeePayload,
 } from "@/types/employee";
-import { HardwareAssignment } from "@/types/assignment";
+import {
+  AssignHardwarePayload,
+  HardwareAssignment,
+} from "@/types/assignment";
 
 export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000";
@@ -51,6 +54,21 @@ export async function fetchHardwareAssignmentList(): Promise<
   HardwareAssignment[]
 > {
   const response = await fetch(`${API_BASE_URL}/api/v1/assign-hardware-list`);
+  await assertOk(response);
+
+  return response.json();
+}
+
+export async function assignHardware(
+  assignmentData: AssignHardwarePayload,
+): Promise<HardwareAssignment[]> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/assign-hardware`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(assignmentData),
+  });
   await assertOk(response);
 
   return response.json();

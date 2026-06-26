@@ -10,11 +10,6 @@ import { Hardware } from "@/types/hardware";
 const displayValue = (value: string | number | null | undefined) =>
   value === null || value === undefined || value === "" ? "-" : String(value);
 
-const formatMoney = (value: number | null | undefined, currency: string) => {
-  if (value === null || value === undefined) return "-";
-  return `${currency} ${value.toLocaleString()}`;
-};
-
 const getStatusStyle = (status: string | null | undefined) => {
   if (status === "Operational") {
     return "bg-emerald-50 text-emerald-700 ring-emerald-600/20";
@@ -104,10 +99,19 @@ export default function AssignmentHardwarePage() {
         </div>
 
         <section className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-          <div className="border-b border-gray-100 bg-gray-50/50 px-6 py-4">
-            <h2 className="text-sm font-semibold text-slate-700">
-              Hardware Details
-            </h2>
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 bg-gray-50/50 px-6 py-4">
+            <div>
+              <h2 className="text-sm font-semibold text-slate-700">
+                Hardware Details
+              </h2>
+              <p className="mt-1 text-xs text-slate-500">
+                {hardwareItems.length} deployed item
+                {hardwareItems.length === 1 ? "" : "s"}
+              </p>
+            </div>
+            <span className="rounded-full bg-purple-50 px-3 py-1 text-xs font-semibold text-purple-700 ring-1 ring-inset ring-purple-600/20">
+              Assignment #{displayValue(assignmentId)}
+            </span>
           </div>
 
           {isLoading ? (
@@ -137,14 +141,14 @@ export default function AssignmentHardwarePage() {
             </div>
           ) : (
             <div className="overflow-auto">
-              <table className="w-full min-w-[1600px] border-collapse text-left">
+              <table className="w-full min-w-[1100px] border-collapse text-left">
                 <thead>
                   <tr className="sticky top-0 z-10 border-b border-gray-100 bg-gray-50">
                     <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-500">
                       CKT#
                     </th>
                     <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-500">
-                      Type
+                      Hardware Type
                     </th>
                     <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-500">
                       Brand
@@ -153,7 +157,7 @@ export default function AssignmentHardwarePage() {
                       Model
                     </th>
                     <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-500">
-                      Serial
+                      Serial Number
                     </th>
                     <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-500">
                       Status
@@ -165,40 +169,7 @@ export default function AssignmentHardwarePage() {
                       Date Tested
                     </th>
                     <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-500">
-                      Warranty
-                    </th>
-                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-500">
-                      Qty
-                    </th>
-                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-500">
-                      Processor
-                    </th>
-                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-500">
-                      RAM
-                    </th>
-                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-500">
-                      Storage
-                    </th>
-                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-500">
-                      OS
-                    </th>
-                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-500">
-                      USD
-                    </th>
-                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-500">
-                      PHP
-                    </th>
-                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-500">
-                      Arrival
-                    </th>
-                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-500">
-                      Notes
-                    </th>
-                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-500">
-                      Created
-                    </th>
-                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-500">
-                      Updated
+                      Created At
                     </th>
                   </tr>
                 </thead>
@@ -250,50 +221,7 @@ export default function AssignmentHardwarePage() {
                         {displayValue(item.date_tested)}
                       </td>
                       <td className="px-6 py-4 text-sm text-slate-600">
-                        {displayValue(item.warranty)}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-slate-600">
-                        {displayValue(item.qty)}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-slate-600">
-                        {displayValue(
-                          [item.processor_type, item.processor_speed]
-                            .filter(Boolean)
-                            .join(" "),
-                        )}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-slate-600">
-                        {item.ram === null || item.ram === undefined
-                          ? "-"
-                          : `${item.ram} GB`}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-slate-600">
-                        {displayValue(
-                          [item.hd_storage, item.hd_type]
-                            .filter(Boolean)
-                            .join(" "),
-                        )}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-slate-600">
-                        {displayValue(item.operating_system)}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-slate-600">
-                        {formatMoney(item.price_dollar, "$")}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-slate-600">
-                        {formatMoney(item.price_peso, "PHP")}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-slate-600">
-                        {displayValue(item.date_of_arrival)}
-                      </td>
-                      <td className="max-w-xs truncate px-6 py-4 text-sm text-slate-600">
-                        {displayValue(item.notes)}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-slate-600">
                         {displayValue(item.created_at)}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-slate-600">
-                        {displayValue(item.updated_at)}
                       </td>
                     </tr>
                   ))}

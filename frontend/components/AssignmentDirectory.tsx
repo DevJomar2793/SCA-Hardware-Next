@@ -1,4 +1,4 @@
-import { CalendarDays, Filter, Loader2, Plus, Search } from "lucide-react";
+import { Filter, Loader2, Plus, Search } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { HardwareAssignment } from "@/types/assignment";
@@ -34,6 +34,10 @@ const getStatusStyle = (status: string | null | undefined) => {
 
   return "bg-emerald-50 text-emerald-700 ring-emerald-600/20";
 };
+
+const isActiveAssignment = (assignment: HardwareAssignment) =>
+  !assignment.date_returned &&
+  assignment.status.trim().toLowerCase() !== "returned";
 
 export function AssignmentDirectory({
   assignments,
@@ -78,6 +82,36 @@ export function AssignmentDirectory({
     });
   }, [assignments, departmentFilter, employeeById, searchTerm]);
 
+  const assignedEmployeeIds = useMemo(
+    () =>
+      new Set(
+        assignments
+          .filter(isActiveAssignment)
+          .map((assignment) => assignment.employee_details_id),
+      ),
+    [assignments],
+  );
+
+  const filteredUnassignedEmployees = useMemo(() => {
+    const normalizedSearchTerm = searchTerm.trim().toUpperCase();
+
+    return employees.filter((employee) => {
+      if (assignedEmployeeIds.has(employee.id)) return false;
+
+      const employeeName = getEmployeeFullName(employee);
+      const matchesSearch =
+        normalizedSearchTerm === "" ||
+        employeeName.toUpperCase().includes(normalizedSearchTerm);
+      const matchesDepartment =
+        departmentFilter === "All" || employee.department === departmentFilter;
+
+      return matchesSearch && matchesDepartment;
+    });
+  }, [assignedEmployeeIds, departmentFilter, employees, searchTerm]);
+
+  const hasVisibleCards =
+    filteredAssignments.length > 0 || filteredUnassignedEmployees.length > 0;
+
   const getEmployeeLabel = (assignment: HardwareAssignment) => {
     const employee = employeeById.get(assignment.employee_details_id);
     if (!employee) return `Employee #${assignment.employee_details_id}`;
@@ -95,19 +129,15 @@ export function AssignmentDirectory({
     return employee?.department || "Department unavailable";
   };
 
+  const getUnassignedEmployeeName = (employee: EmployeeDetails) =>
+    getEmployeeFullName(employee) || `Employee #${employee.id}`;
+
   return (
     <div className="min-h-full bg-gray-100 p-8">
       <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
         <h1 className="text-3xl font-bold text-slate-800">
           Hardware Assignments
         </h1>
-        <button
-          type="button"
-          className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 font-medium text-slate-700 shadow-sm transition-colors hover:bg-gray-50"
-        >
-          <Plus size={18} />
-          Assign Hardware
-        </button>
       </div>
 
       <div className="mb-6 flex flex-wrap items-center gap-4">
@@ -161,13 +191,13 @@ export function AssignmentDirectory({
             Retry
           </button>
         </div>
-      ) : assignments.length === 0 ? (
+      ) : employees.length === 0 ? (
         <div className="flex min-h-72 items-center justify-center rounded-xl bg-white p-8 text-center shadow-sm">
           <p className="text-sm font-medium text-slate-500">
-            No hardware assignments found.
+            No employees found.
           </p>
         </div>
-      ) : filteredAssignments.length === 0 ? (
+      ) : !hasVisibleCards ? (
         <div className="flex min-h-72 items-center justify-center rounded-xl bg-white p-8 text-center shadow-sm">
           <p className="text-sm font-medium text-slate-500">
             No matching assignments found.
@@ -208,18 +238,50 @@ export function AssignmentDirectory({
                       {getEmployeeDepartment(assignment)}
                     </p>
                   </div>
-                  <div className="mt-5 flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-600">
-                    <CalendarDays size={16} className="text-slate-400" />
-                    <span className="font-medium">Assigned</span>
-                    <span className="min-w-0 truncate">
-                      {displayValue(assignment.date_assigned)}
-                    </span>
-                  </div>
                   <Link
                     href={`/assignment/${assignment.id}/hardware`}
                     className="mt-5 inline-flex w-full items-center justify-center rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                   >
                     View Deployed Hardware
+                  </Link>
+                </div>
+              </article>
+            );
+          })}
+          {filteredUnassignedEmployees.map((employee) => {
+            const name = getUnassignedEmployeeName(employee);
+
+            return (
+              <article
+                key={`employee-${employee.id}`}
+                className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition-shadow hover:shadow-md"
+              >
+                <div className="h-16 bg-slate-100" />
+                <div className="px-5 pb-5">
+                  <div className="-mt-8 mb-4 flex items-end justify-between gap-3">
+                    <div className="flex h-16 w-16 items-center justify-center rounded-full border-4 border-white bg-slate-600 text-lg font-bold text-white shadow-sm">
+                      {getInitials(name)}
+                    </div>
+                    <span className="mb-1 inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold text-amber-700 ring-1 ring-inset ring-amber-600/20">
+                      Unassigned
+                    </span>
+                  </div>
+                  <div className="text-left">
+                    <h2 className="truncate text-lg font-bold text-slate-900">
+                      {name}
+                    </h2>
+                    <p className="mt-1 truncate text-sm font-medium text-slate-500">
+                      {employee.position || "Position unavailable"}
+                    </p>
+                    <p className="mt-1 truncate text-xs font-medium uppercase tracking-wide text-slate-400">
+                      {employee.department || "Department unavailable"}
+                    </p>
+                  </div>
+                  <Link
+                    href={`/assignment/employee/${employee.id}/hardware`}
+                    className="mt-5 inline-flex w-full items-center justify-center rounded-lg bg-purple-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                  >
+                    Assign Hardware
                   </Link>
                 </div>
               </article>

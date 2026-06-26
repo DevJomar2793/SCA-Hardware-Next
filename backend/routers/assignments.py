@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Union
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func
@@ -74,24 +74,51 @@ def ensure_hardware_is_available(
 
 @router.post(
     "/assign-hardware",
-    response_model=schemas.AssignHardwareDetails,
+    response_model=List[schemas.AssignHardwareDetails],
     status_code=201,
 )
 def create_hardware_assignment(
-    assignment: schemas.AssignHardwareCreate,
+    assignment: Union[schemas.AssignHardwareCreate, schemas.AssignHardwareBulkCreate],
     db: Session = Depends(get_db),
 ):
     ensure_employee_exists(assignment.employee_details_id, db)
-    ensure_hardware_exists(assignment.hardware_id, db)
+
+    hardware_ids = (
+        assignment.hardware_ids
+        if isinstance(assignment, schemas.AssignHardwareBulkCreate)
+        else [assignment.hardware_id]
+    )
+
+    if len(hardware_ids) == 0:
+        raise HTTPException(status_code=422, detail="Select at least one hardware item")
+
+    if len(set(hardware_ids)) != len(hardware_ids):
+        raise HTTPException(status_code=400, detail="Duplicate hardware items selected")
+
+    for hardware_id in hardware_ids:
+        ensure_hardware_exists(hardware_id, db)
 
     if is_active_assignment_data(assignment.status, assignment.date_returned):
-        ensure_hardware_is_available(assignment.hardware_id, db)
+        for hardware_id in hardware_ids:
+            ensure_hardware_is_available(hardware_id, db)
 
-    db_assignment = models.AssignHardwareDetails(**assignment.dict())
-    db.add(db_assignment)
+    base_assignment_data = assignment.dict(exclude={"hardware_ids", "hardware_id"})
+    db_assignments = [
+        models.AssignHardwareDetails(
+            **base_assignment_data,
+            hardware_id=hardware_id,
+        )
+        for hardware_id in hardware_ids
+    ]
+
+    db.add_all(db_assignments)
+
     db.commit()
-    db.refresh(db_assignment)
-    return db_assignment
+
+    for db_assignment in db_assignments:
+        db.refresh(db_assignment)
+
+    return db_assignments
 
 
 @router.get(

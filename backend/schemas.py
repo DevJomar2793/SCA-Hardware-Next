@@ -256,6 +256,13 @@ class AssignHardwareCreate(AssignHardwareBase):
     status: str = "Assigned"
 
 
+class AssignHardwareBulkCreate(AssignHardwareBase):
+    employee_details_id: int
+    hardware_ids: List[int]
+    date_assigned: str
+    status: str = "Assigned"
+
+
 class AssignHardwareUpdate(AssignHardwareBase):
     pass
 
