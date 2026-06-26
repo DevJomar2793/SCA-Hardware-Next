@@ -310,10 +310,10 @@ export default function EmployeeHardwareSelectionPage() {
                   {submitError}
                 </div>
               )}
-              <div className="overflow-auto rounded-lg border border-gray-200 bg-white">
+              <div className="max-h-[260px] overflow-auto rounded-lg border border-gray-200 bg-white">
                 <table className="w-full min-w-[760px] border-collapse text-left">
                   <thead>
-                    <tr className="border-b border-gray-100 bg-gray-50">
+                    <tr className="sticky top-0 z-10 border-b border-gray-100 bg-gray-50">
                       <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500">
                         CKT#
                       </th>
@@ -395,102 +395,104 @@ export default function EmployeeHardwareSelectionPage() {
               </p>
             </div>
           ) : (
-            <div className="overflow-auto">
-              <table className="w-full min-w-[1100px] border-collapse text-left">
-                <thead>
-                  <tr className="sticky top-0 z-10 border-b border-gray-100 bg-gray-50">
-                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-500">
-                      CKT#
-                    </th>
-                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-500">
-                      Hardware Type
-                    </th>
-                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-500">
-                      Brand
-                    </th>
-                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-500">
-                      Model
-                    </th>
-                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-500">
-                      Serial Number
-                    </th>
-                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-500">
-                      Status
-                    </th>
-                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-500">
-                      Condition
-                    </th>
-                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-500">
-                      Date Tested
-                    </th>
-                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-500">
-                      Action
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {paginatedHardwareItems.map((item) => (
-                    <tr
-                      key={item.id}
-                      className="transition-colors hover:bg-gray-50/50"
-                    >
-                      <td className="px-6 py-4 text-sm font-medium">
-                        <Link
-                          href={`/hardware/${item.id}`}
-                          className="font-semibold text-purple-600 transition-colors hover:text-purple-800 hover:underline"
-                        >
-                          {displayValue(item.ckt_item_number)}
-                        </Link>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-slate-600">
-                        {displayValue(item.hardware_type)}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-slate-600">
-                        {displayValue(item.manufacturer)}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-slate-600">
-                        {displayValue(item.model_number)}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-slate-600">
-                        {displayValue(item.serial_number)}
-                      </td>
-                      <td className="px-6 py-4 text-sm">
-                        <span
-                          className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset ${getStatusStyle(
-                            item.operational,
-                          )}`}
-                        >
-                          {displayValue(item.operational)}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-sm">
-                        <span
-                          className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset ${getConditionStyle(
-                            item.new_or_used,
-                          )}`}
-                        >
-                          {displayValue(item.new_or_used)}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-slate-600">
-                        {displayValue(item.date_tested)}
-                      </td>
-                      <td className="px-6 py-4 text-sm">
-                        <button
-                          type="button"
-                          onClick={() => handleAssignHardware(item)}
-                          disabled={assignedHardwareIds.has(item.id)}
-                          className="rounded-lg bg-purple-600 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-purple-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
-                        >
-                          {assignedHardwareIds.has(item.id)
-                            ? "Assigned"
-                            : "Assign"}
-                        </button>
-                      </td>
+            <div>
+              <div className="max-h-[520px] overflow-auto">
+                <table className="w-full min-w-[1100px] border-collapse text-left">
+                  <thead>
+                    <tr className="sticky top-0 z-10 border-b border-gray-100 bg-gray-50">
+                      <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-500">
+                        CKT#
+                      </th>
+                      <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-500">
+                        Hardware Type
+                      </th>
+                      <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-500">
+                        Brand
+                      </th>
+                      <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-500">
+                        Model
+                      </th>
+                      <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-500">
+                        Serial Number
+                      </th>
+                      <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-500">
+                        Status
+                      </th>
+                      <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-500">
+                        Condition
+                      </th>
+                      <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-500">
+                        Date Tested
+                      </th>
+                      <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-500">
+                        Action
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {paginatedHardwareItems.map((item) => (
+                      <tr
+                        key={item.id}
+                        className="transition-colors hover:bg-gray-50/50"
+                      >
+                        <td className="px-6 py-4 text-sm font-medium">
+                          <Link
+                            href={`/hardware/${item.id}`}
+                            className="font-semibold text-purple-600 transition-colors hover:text-purple-800 hover:underline"
+                          >
+                            {displayValue(item.ckt_item_number)}
+                          </Link>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-slate-600">
+                          {displayValue(item.hardware_type)}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-slate-600">
+                          {displayValue(item.manufacturer)}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-slate-600">
+                          {displayValue(item.model_number)}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-slate-600">
+                          {displayValue(item.serial_number)}
+                        </td>
+                        <td className="px-6 py-4 text-sm">
+                          <span
+                            className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset ${getStatusStyle(
+                              item.operational,
+                            )}`}
+                          >
+                            {displayValue(item.operational)}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-sm">
+                          <span
+                            className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset ${getConditionStyle(
+                              item.new_or_used,
+                            )}`}
+                          >
+                            {displayValue(item.new_or_used)}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-slate-600">
+                          {displayValue(item.date_tested)}
+                        </td>
+                        <td className="px-6 py-4 text-sm">
+                          <button
+                            type="button"
+                            onClick={() => handleAssignHardware(item)}
+                            disabled={assignedHardwareIds.has(item.id)}
+                            className="rounded-lg bg-purple-600 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-purple-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
+                          >
+                            {assignedHardwareIds.has(item.id)
+                              ? "Assigned"
+                              : "Assign"}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
               <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 p-4 text-sm text-gray-500">
                 <p>
                   Showing{" "}
