@@ -118,12 +118,14 @@ const parseOptionalInteger = (value: string | number | null | undefined) => {
   return Number.isFinite(parsed) ? Math.trunc(parsed) : null;
 };
 
-const getRequiredFields = (hardwareType: string): readonly RequiredHardwareField[] =>
+const getRequiredFields = (
+  hardwareType: string,
+): readonly RequiredHardwareField[] =>
   !hardwareType
     ? []
     : HARDWARE_TYPES_WITH_REQUIRED_SPECS.has(hardwareType)
-    ? SPEC_REQUIRED_FIELDS
-    : BASE_REQUIRED_FIELDS;
+      ? SPEC_REQUIRED_FIELDS
+      : BASE_REQUIRED_FIELDS;
 
 const isMissingValue = (value: unknown) =>
   value === null ||
@@ -424,7 +426,11 @@ export const AddHardwareModal: React.FC<AddHardwareModalProps> = ({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} noValidate className="p-6 overflow-y-auto">
+        <form
+          onSubmit={handleSubmit}
+          noValidate
+          className="p-6 overflow-y-auto"
+        >
           {error && (
             <div className="mb-6 p-4 bg-red-50 border border-red-200 text-gray-600 rounded-lg text-sm">
               {error}
@@ -573,7 +579,9 @@ export const AddHardwareModal: React.FC<AddHardwareModalProps> = ({
                       onChange={handleChange}
                       className="w-full px-3 py-2 pr-8 border border-gray-200 text-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none"
                     />
-                    {isFieldRequired("processor_speed") && <RequiredIndicator />}
+                    {isFieldRequired("processor_speed") && (
+                      <RequiredIndicator />
+                    )}
                   </div>
                 </div>
                 <div>
@@ -969,7 +977,7 @@ export const AddHardwareModal: React.FC<AddHardwareModalProps> = ({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/85 p-4 sm:p-8"
+            className="fixed inset-0 z-70 flex items-center justify-center bg-slate-950/85 p-4 sm:p-8"
             onClick={() => setPreviewImage(null)}
           >
             <button
