@@ -155,13 +155,13 @@ export default function AssignmentHardwarePage() {
             <div className="flex flex-wrap items-center gap-2">
               {!isLoading && deployedItems.length > 0 && (
                 <>
-                  <button
-                    type="button"
+                  <Link
+                    href={`/assignment/${assignmentId}/acknowledgement`}
                     className="inline-flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-xs font-semibold text-blue-700 ring-1 ring-inset ring-blue-200 transition hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                   >
                     <FileText size={15} />
                     Acknowledgement Report
-                  </button>
+                  </Link>
                   <button
                     type="button"
                     onClick={() => setShowRemoveActions((current) => !current)}

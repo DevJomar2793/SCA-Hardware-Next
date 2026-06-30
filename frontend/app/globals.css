@@ -34,3 +34,191 @@ body {
   color: #3730a3 !important; /* indigo-800 */
   text-decoration: underline !important;
 }
+
+.acknowledgement-paper {
+  box-sizing: border-box;
+  width: 210mm;
+  min-height: 297mm;
+  padding: 14mm 16mm;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.report-title {
+  margin: 0 0 8mm;
+  font-size: 19px;
+  letter-spacing: -0.01em;
+}
+
+.report-employee-details {
+  margin-bottom: 7mm;
+}
+
+.report-employee-fields {
+  margin-top: 5mm;
+}
+
+.report-field {
+  display: flex;
+  min-height: 5mm;
+  gap: 2mm;
+}
+
+.report-field-label {
+  min-width: 29mm;
+}
+
+.report-items-table {
+  table-layout: fixed;
+  margin-bottom: 7mm;
+}
+
+.report-items-table th,
+.report-items-table td {
+  height: 8mm;
+  border: 1px solid #111;
+  padding: 1.5mm 2mm;
+  vertical-align: middle;
+}
+
+.report-items-table th {
+  font-size: 13px;
+  font-weight: 500;
+  text-align: center;
+}
+
+.report-items-table td {
+  overflow-wrap: anywhere;
+}
+
+.report-quantity-column {
+  width: 23mm;
+}
+
+.report-date-column {
+  width: 43mm;
+}
+
+.report-terms > p {
+  margin-bottom: 2mm;
+}
+
+.report-terms ul {
+  margin: 0;
+  padding-left: 8mm;
+}
+
+.report-terms li {
+  margin-bottom: 1.5mm;
+  padding-left: 1mm;
+}
+
+.report-signatures {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18mm;
+  margin-top: 9mm;
+}
+
+.report-signature-column,
+.report-receipt-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 6mm;
+}
+
+.report-signature-block p {
+  margin: 0;
+}
+
+.report-signature-label {
+  display: inline-block;
+  min-width: 24mm;
+}
+
+.report-signatory-name {
+  display: inline-block;
+  border-bottom: 1px solid #111;
+  line-height: 1.2;
+}
+
+.report-signature-position {
+  padding-left: 26mm;
+}
+
+.report-line-field {
+  display: flex;
+  align-items: flex-end;
+  gap: 2mm;
+  white-space: nowrap;
+}
+
+.report-line-compact {
+  margin-top: 1.5mm;
+}
+
+.report-write-line {
+  display: inline-block;
+  width: 100%;
+  min-width: 28mm;
+  height: 4mm;
+  border-bottom: 1px solid #111;
+}
+
+.report-return-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 3mm;
+  margin-top: 6mm;
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 0;
+  }
+
+  html,
+  body {
+    width: 210mm;
+    height: auto !important;
+    min-height: 297mm;
+    overflow: visible !important;
+    background: #fff !important;
+  }
+
+  body {
+    display: block !important;
+  }
+
+  .app-navigation,
+  .app-footer,
+  .report-screen-controls {
+    display: none !important;
+  }
+
+  .app-content-shell,
+  .app-scroll-area {
+    display: block !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .acknowledgement-report-page {
+    min-height: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+  }
+
+  .acknowledgement-paper {
+    margin: 0 !important;
+    box-shadow: none !important;
+  }
+
+  .report-items-table tr,
+  .report-signature-block,
+  .report-line-field {
+    break-inside: avoid;
+  }
+}

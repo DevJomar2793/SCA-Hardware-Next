@@ -31,8 +31,8 @@ export default function RootLayout({
     >
       <body className="h-screen bg-zinc-100 flex font-sans overflow-hidden">
         <SideNav />
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <div className="flex-1 overflow-y-auto">
+        <div className="app-content-shell flex-1 flex flex-col overflow-hidden">
+          <div className="app-scroll-area flex-1 overflow-y-auto">
             {children}
           </div>
           <Footer />

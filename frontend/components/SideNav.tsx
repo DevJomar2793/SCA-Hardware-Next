@@ -36,7 +36,7 @@ export const SideNav: React.FC = () => {
   }, [pathname]);
 
   return (
-    <div className="w-64 bg-[#0f172a] text-slate-300 h-full flex flex-col">
+    <div className="app-navigation w-64 bg-[#0f172a] text-slate-300 h-full flex flex-col">
       {/* Brand Logo */}
       <div className="p-6 flex items-center gap-3 border-b border-slate-800">
         <div className="w-8 h-8 bg-purple-600 rounded-md flex items-center justify-center">
