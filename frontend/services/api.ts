@@ -17,6 +17,30 @@ import {
 export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000";
 
+const API_TIMEOUT_MS = 10_000;
+
+async function apiFetch(
+  input: string,
+  init: RequestInit = {},
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
+
+  try {
+    return await fetch(input, { ...init, signal: controller.signal });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new Error(
+        "The server took too long to respond. Check that the backend is running and try again.",
+      );
+    }
+
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 async function assertOk(response: Response): Promise<void> {
   if (response.ok) return;
 
@@ -27,7 +51,7 @@ async function assertOk(response: Response): Promise<void> {
 }
 
 export async function fetchHardwareList(): Promise<Hardware[]> {
-  const response = await fetch(`${API_BASE_URL}/api/v1/hardware-list`);
+  const response = await apiFetch(`${API_BASE_URL}/api/v1/hardware-list`);
   await assertOk(response);
 
   return response.json();
@@ -36,7 +60,7 @@ export async function fetchHardwareList(): Promise<Hardware[]> {
 export async function fetchHardwareById(
   hardwareId: number | string,
 ): Promise<Hardware> {
-  const response = await fetch(
+  const response = await apiFetch(
     `${API_BASE_URL}/api/v1/hardware-by-id/${hardwareId}`,
   );
   await assertOk(response);
@@ -45,7 +69,7 @@ export async function fetchHardwareById(
 }
 
 export async function fetchEmployeeList(): Promise<EmployeeDetails[]> {
-  const response = await fetch(`${API_BASE_URL}/api/v1/employee-list`);
+  const response = await apiFetch(`${API_BASE_URL}/api/v1/employee-list`);
   await assertOk(response);
 
   return response.json();
@@ -54,7 +78,7 @@ export async function fetchEmployeeList(): Promise<EmployeeDetails[]> {
 export async function fetchHardwareAssignmentList(): Promise<
   HardwareAssignment[]
 > {
-  const response = await fetch(`${API_BASE_URL}/api/v1/assign-hardware-list`);
+  const response = await apiFetch(`${API_BASE_URL}/api/v1/assign-hardware-list`);
   await assertOk(response);
 
   return response.json();
@@ -63,7 +87,7 @@ export async function fetchHardwareAssignmentList(): Promise<
 export async function assignHardware(
   assignmentData: AssignHardwarePayload,
 ): Promise<HardwareAssignment[]> {
-  const response = await fetch(`${API_BASE_URL}/api/v1/assign-hardware`, {
+  const response = await apiFetch(`${API_BASE_URL}/api/v1/assign-hardware`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -78,7 +102,7 @@ export async function assignHardware(
 export async function fetchAssignedHardwareByAssignmentId(
   assignmentId: number | string,
 ): Promise<DeployedHardwareItem[]> {
-  const response = await fetch(
+  const response = await apiFetch(
     `${API_BASE_URL}/api/v1/assign-hardware/${assignmentId}/hardware-items`,
   );
   await assertOk(response);
@@ -89,7 +113,7 @@ export async function fetchAssignedHardwareByAssignmentId(
 export async function returnHardwareAssignment(
   assignmentId: number | string,
 ): Promise<HardwareAssignment> {
-  const response = await fetch(
+  const response = await apiFetch(
     `${API_BASE_URL}/api/v1/assign-hardware/${assignmentId}/return`,
     {
       method: "PUT",
@@ -103,7 +127,7 @@ export async function returnHardwareAssignment(
 export async function fetchEmployeeById(
   employeeId: number | string,
 ): Promise<EmployeeDetails> {
-  const response = await fetch(
+  const response = await apiFetch(
     `${API_BASE_URL}/api/v1/employee-by-id/${employeeId}`,
   );
   await assertOk(response);
@@ -114,7 +138,7 @@ export async function fetchEmployeeById(
 export async function addEmployee(
   employeeData: AddEmployeePayload,
 ): Promise<EmployeeDetails> {
-  const response = await fetch(`${API_BASE_URL}/api/v1/add-employee`, {
+  const response = await apiFetch(`${API_BASE_URL}/api/v1/add-employee`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -130,13 +154,16 @@ export async function updateEmployee(
   employeeId: number | string,
   employeeData: UpdateEmployeePayload,
 ): Promise<EmployeeDetails> {
-  const response = await fetch(`${API_BASE_URL}/api/v1/employee/${employeeId}`, {
-    method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
+  const response = await apiFetch(
+    `${API_BASE_URL}/api/v1/employee/${employeeId}`,
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(employeeData),
     },
-    body: JSON.stringify(employeeData),
-  });
+  );
   await assertOk(response);
 
   return response.json();
@@ -145,9 +172,12 @@ export async function updateEmployee(
 export async function deleteEmployee(
   employeeId: number | string,
 ): Promise<EmployeeDetails> {
-  const response = await fetch(`${API_BASE_URL}/api/v1/employee/${employeeId}`, {
-    method: "DELETE",
-  });
+  const response = await apiFetch(
+    `${API_BASE_URL}/api/v1/employee/${employeeId}`,
+    {
+      method: "DELETE",
+    },
+  );
   await assertOk(response);
 
   return response.json();
@@ -159,7 +189,7 @@ export async function importExcel(
   const formData = new FormData();
   formData.append("file", file);
 
-  const response = await fetch(`${API_BASE_URL}/api/v1/import-excel`, {
+  const response = await apiFetch(`${API_BASE_URL}/api/v1/import-excel`, {
     method: "POST",
     body: formData,
   });
@@ -171,7 +201,7 @@ export async function importExcel(
 export async function addHardware(
   hardwareData: AddHardwarePayload,
 ): Promise<Hardware> {
-  const response = await fetch(`${API_BASE_URL}/api/v1/add-hardware`, {
+  const response = await apiFetch(`${API_BASE_URL}/api/v1/add-hardware`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -187,22 +217,28 @@ export async function updateHardware(
   hardwareId: number,
   hardwareData: UpdateHardwarePayload,
 ): Promise<Hardware> {
-  const response = await fetch(`${API_BASE_URL}/api/v1/hardware/${hardwareId}`, {
-    method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
+  const response = await apiFetch(
+    `${API_BASE_URL}/api/v1/hardware/${hardwareId}`,
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(hardwareData),
     },
-    body: JSON.stringify(hardwareData),
-  });
+  );
   await assertOk(response);
 
   return response.json();
 }
 
 export async function deleteHardware(hardwareId: number): Promise<Hardware> {
-  const response = await fetch(`${API_BASE_URL}/api/v1/hardware/${hardwareId}`, {
-    method: "DELETE",
-  });
+  const response = await apiFetch(
+    `${API_BASE_URL}/api/v1/hardware/${hardwareId}`,
+    {
+      method: "DELETE",
+    },
+  );
   await assertOk(response);
 
   return response.json();
@@ -213,7 +249,7 @@ export async function deleteHardwareImage(
   imagePath: string,
 ): Promise<string> {
   const params = new URLSearchParams({ image_path: imagePath });
-  const response = await fetch(
+  const response = await apiFetch(
     `${API_BASE_URL}/api/v1/hardware/${hardwareId}/image?${params}`,
     {
       method: "DELETE",
@@ -229,7 +265,9 @@ export async function fetchNextCktNumber(
   hardwareType: string,
 ): Promise<string> {
   const params = new URLSearchParams({ hardware_type: hardwareType });
-  const response = await fetch(`${API_BASE_URL}/api/v1/next-ckt-number?${params}`);
+  const response = await apiFetch(
+    `${API_BASE_URL}/api/v1/next-ckt-number?${params}`,
+  );
   await assertOk(response);
 
   const data = await response.json();
@@ -245,7 +283,7 @@ export async function uploadHardwareImages(
     formData.append("files", file);
   });
 
-  const response = await fetch(
+  const response = await apiFetch(
     `${API_BASE_URL}/api/v1/hardware/${hardwareId}/upload-image`,
     {
       method: "POST",

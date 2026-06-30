@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { ArrowLeft, Loader2, MinusCircle } from "lucide-react";
+import { ArrowLeft, FileText, Loader2, MinusCircle } from "lucide-react";
 import Swal from "sweetalert2";
 import {
   fetchAssignedHardwareByAssignmentId,
@@ -154,14 +154,23 @@ export default function AssignmentHardwarePage() {
             </div>
             <div className="flex flex-wrap items-center gap-2">
               {!isLoading && deployedItems.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setShowRemoveActions((current) => !current)}
-                  className="inline-flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-xs font-semibold text-red-700 ring-1 ring-inset ring-red-200 transition hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
-                >
-                  <MinusCircle size={15} />
-                  Remove Hardware
-                </button>
+                <>
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-xs font-semibold text-blue-700 ring-1 ring-inset ring-blue-200 transition hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                  >
+                    <FileText size={15} />
+                    Acknowledgement Report
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowRemoveActions((current) => !current)}
+                    className="inline-flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-xs font-semibold text-red-700 ring-1 ring-inset ring-red-200 transition hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                  >
+                    <MinusCircle size={15} />
+                    Remove Hardware
+                  </button>
+                </>
               )}
               <span className="rounded-full bg-purple-50 px-3 py-1 text-xs font-semibold text-purple-700 ring-1 ring-inset ring-purple-600/20">
                 Assignment #{displayValue(assignmentId)}
