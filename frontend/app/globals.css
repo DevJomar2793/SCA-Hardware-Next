@@ -132,6 +132,40 @@ body {
   margin: 0;
 }
 
+.report-signature-media {
+  display: flex;
+  align-items: flex-end;
+  gap: 3mm;
+  margin-left: 26mm;
+  margin-bottom: 1mm;
+}
+
+.report-signature-media.has-signature {
+  min-height: 10mm;
+}
+
+.report-signature-image {
+  display: block;
+  width: 27mm;
+  height: 10mm;
+  object-fit: contain;
+  object-position: left bottom;
+}
+
+.signature-screen-controls {
+  display: flex;
+  align-items: center;
+  gap: 2.5mm;
+}
+
+.signature-drawing-canvas {
+  background-color: #fff;
+  background-image:
+    linear-gradient(#e2e8f0 1px, transparent 1px),
+    linear-gradient(90deg, #e2e8f0 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
 .report-signature-label {
   display: inline-block;
   min-width: 24mm;
@@ -194,7 +228,12 @@ body {
 
   .app-navigation,
   .app-footer,
-  .report-screen-controls {
+  .report-screen-controls,
+  .signature-screen-controls {
+    display: none !important;
+  }
+
+  .report-signature-media:not(.has-signature) {
     display: none !important;
   }
 

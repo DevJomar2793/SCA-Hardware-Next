@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, Boolean, ForeignKey
+from sqlalchemy import Column, Integer, String, Float, Boolean, ForeignKey, Text, UniqueConstraint
 from sqlalchemy.orm import relationship
 from database import Base
 from datetime import datetime
@@ -97,6 +97,39 @@ class AssignHardwareDetails(Base):
 
     employee = relationship("EmployeeDetails", back_populates="assign_hardware_details")
     hardware = relationship("Hardware", back_populates="assign_hardware_details")
+    acknowledgement_signatures = relationship(
+        "AcknowledgementSignature",
+        back_populates="assignment",
+        cascade="all, delete-orphan",
+    )
+
+
+class AcknowledgementSignature(Base):
+    __tablename__ = "acknowledgement_signatures"
+    __table_args__ = (
+        UniqueConstraint(
+            "assignment_id",
+            "signatory_key",
+            name="uq_acknowledgement_signature_assignment_signatory",
+        ),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    assignment_id = Column(
+        Integer,
+        ForeignKey("assign_hardware_details.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    signatory_key = Column(String, nullable=False)
+    signature_data = Column(Text, nullable=False)
+    created_at = Column(String, default=current_timestamp)
+    updated_at = Column(String, default=current_timestamp, onupdate=current_timestamp)
+
+    assignment = relationship(
+        "AssignHardwareDetails",
+        back_populates="acknowledgement_signatures",
+    )
     
     
     

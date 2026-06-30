@@ -3,7 +3,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { ArrowLeft, Loader2, Printer } from "lucide-react";
+import { ArrowLeft, Loader2, PenLine, Printer, Trash2 } from "lucide-react";
+import Swal from "sweetalert2";
+import { SignaturePadModal } from "@/components/SignaturePadModal";
 import {
   buildItemDescription,
   formatEmployeeName,
@@ -11,9 +13,13 @@ import {
   formatReportDate,
 } from "@/lib/acknowledgement-report";
 import {
+  deleteAcknowledgementSignature,
+  fetchAcknowledgementSignature,
   fetchAssignedHardwareByAssignmentId,
   fetchEmployeeById,
+  saveAcknowledgementSignature,
 } from "@/services/api";
+import { AcknowledgementSignature } from "@/types/acknowledgement";
 import { DeployedHardwareItem } from "@/types/assignment";
 import { EmployeeDetails } from "@/types/employee";
 
@@ -35,8 +41,13 @@ export default function AcknowledgementReportPage() {
     [],
   );
   const [employee, setEmployee] = useState<EmployeeDetails | null>(null);
+  const [preparedBySignature, setPreparedBySignature] =
+    useState<AcknowledgementSignature | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isSignaturePadOpen, setIsSignaturePadOpen] = useState(false);
+  const [isSavingSignature, setIsSavingSignature] = useState(false);
+  const [isRemovingSignature, setIsRemovingSignature] = useState(false);
 
   const loadReport = useCallback(async () => {
     if (!assignmentId || Number.isNaN(Number(assignmentId))) {
@@ -48,7 +59,11 @@ export default function AcknowledgementReportPage() {
     try {
       setIsLoading(true);
       setError(null);
-      const items = await fetchAssignedHardwareByAssignmentId(assignmentId);
+      const [items, signature] = await Promise.all([
+        fetchAssignedHardwareByAssignmentId(assignmentId),
+        fetchAcknowledgementSignature(assignmentId, "prepared_by"),
+      ]);
+      setPreparedBySignature(signature);
 
       if (items.length === 0) {
         setDeployedItems([]);
@@ -69,10 +84,71 @@ export default function AcknowledgementReportPage() {
       );
       setDeployedItems([]);
       setEmployee(null);
+      setPreparedBySignature(null);
     } finally {
       setIsLoading(false);
     }
   }, [assignmentId]);
+
+  const handleSaveSignature = async (signatureData: string) => {
+    try {
+      setIsSavingSignature(true);
+      const savedSignature = await saveAcknowledgementSignature(
+        assignmentId,
+        "prepared_by",
+        signatureData,
+      );
+      setPreparedBySignature(savedSignature);
+      setIsSignaturePadOpen(false);
+      void Swal.fire({
+        icon: "success",
+        title: "E-signature saved",
+        timer: 1600,
+        showConfirmButton: false,
+      });
+    } catch (err) {
+      void Swal.fire({
+        icon: "error",
+        title: "Unable to save e-signature",
+        text: err instanceof Error ? err.message : "Please try again.",
+      });
+    } finally {
+      setIsSavingSignature(false);
+    }
+  };
+
+  const handleRemoveSignature = async () => {
+    const result = await Swal.fire({
+      icon: "warning",
+      title: "Remove e-signature?",
+      text: "Jomar Cerrado's signature will be removed from this report.",
+      showCancelButton: true,
+      confirmButtonText: "Remove",
+      confirmButtonColor: "#dc2626",
+      reverseButtons: true,
+    });
+    if (!result.isConfirmed) return;
+
+    try {
+      setIsRemovingSignature(true);
+      await deleteAcknowledgementSignature(assignmentId, "prepared_by");
+      setPreparedBySignature(null);
+      void Swal.fire({
+        icon: "success",
+        title: "E-signature removed",
+        timer: 1600,
+        showConfirmButton: false,
+      });
+    } catch (err) {
+      void Swal.fire({
+        icon: "error",
+        title: "Unable to remove e-signature",
+        text: err instanceof Error ? err.message : "Please try again.",
+      });
+    } finally {
+      setIsRemovingSignature(false);
+    }
+  };
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -210,6 +286,10 @@ export default function AcknowledgementReportPage() {
               label="Prepared By"
               name="Jomar Cerrado"
               position="IT Personnel"
+              signatureData={preparedBySignature?.signature_data}
+              onEditSignature={() => setIsSignaturePadOpen(true)}
+              onRemoveSignature={() => void handleRemoveSignature()}
+              isRemovingSignature={isRemovingSignature}
             />
             <SignatureBlock
               label="Issued By"
@@ -232,6 +312,14 @@ export default function AcknowledgementReportPage() {
           </div>
         </section>
       </article>
+      {isSignaturePadOpen && (
+        <SignaturePadModal
+          signatoryName="Jomar Cerrado"
+          isSaving={isSavingSignature}
+          onCancel={() => setIsSignaturePadOpen(false)}
+          onSave={handleSaveSignature}
+        />
+      )}
     </main>
   );
 }
@@ -266,14 +354,62 @@ function SignatureBlock({
   name,
   position,
   showDate = false,
+  signatureData,
+  onEditSignature,
+  onRemoveSignature,
+  isRemovingSignature = false,
 }: {
   label: string;
   name: string;
   position?: string;
   showDate?: boolean;
+  signatureData?: string;
+  onEditSignature?: () => void;
+  onRemoveSignature?: () => void;
+  isRemovingSignature?: boolean;
 }) {
   return (
     <div className="report-signature-block">
+      {onEditSignature && (
+        <div
+          className={`report-signature-media ${signatureData ? "has-signature" : ""}`}
+        >
+          {signatureData && (
+            // A data URL from the drawing canvas cannot use Next.js image optimization.
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={signatureData}
+              alt={`${name} e-signature`}
+              className="report-signature-image"
+            />
+          )}
+          <div className="signature-screen-controls">
+            <button
+              type="button"
+              onClick={onEditSignature}
+              className="inline-flex items-center gap-1 text-[10px] font-semibold text-purple-700 hover:text-purple-900"
+            >
+              <PenLine size={12} />
+              {signatureData ? "Redraw" : "Add E-Signature"}
+            </button>
+            {signatureData && onRemoveSignature && (
+              <button
+                type="button"
+                onClick={onRemoveSignature}
+                disabled={isRemovingSignature}
+                className="inline-flex items-center gap-1 text-[10px] font-semibold text-red-600 hover:text-red-800 disabled:opacity-50"
+              >
+                {isRemovingSignature ? (
+                  <Loader2 size={12} className="animate-spin" />
+                ) : (
+                  <Trash2 size={12} />
+                )}
+                Remove
+              </button>
+            )}
+          </div>
+        </div>
+      )}
       <p>
         <span className="report-signature-label">{label}:</span>{" "}
         <span className="report-signatory-name">{name}</span>

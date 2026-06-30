@@ -13,6 +13,10 @@ import {
   DeployedHardwareItem,
   HardwareAssignment,
 } from "@/types/assignment";
+import {
+  AcknowledgementSignatoryKey,
+  AcknowledgementSignature,
+} from "@/types/acknowledgement";
 
 export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000";
@@ -108,6 +112,51 @@ export async function fetchAssignedHardwareByAssignmentId(
   await assertOk(response);
 
   return response.json();
+}
+
+export async function fetchAcknowledgementSignature(
+  assignmentId: number | string,
+  signatoryKey: AcknowledgementSignatoryKey,
+): Promise<AcknowledgementSignature | null> {
+  const response = await apiFetch(
+    `${API_BASE_URL}/api/v1/assign-hardware/${assignmentId}/acknowledgement-signatures/${signatoryKey}`,
+  );
+  await assertOk(response);
+
+  return response.json();
+}
+
+export async function saveAcknowledgementSignature(
+  assignmentId: number | string,
+  signatoryKey: AcknowledgementSignatoryKey,
+  signatureData: string,
+): Promise<AcknowledgementSignature> {
+  const response = await apiFetch(
+    `${API_BASE_URL}/api/v1/assign-hardware/${assignmentId}/acknowledgement-signatures/${signatoryKey}`,
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ signature_data: signatureData }),
+    },
+  );
+  await assertOk(response);
+
+  return response.json();
+}
+
+export async function deleteAcknowledgementSignature(
+  assignmentId: number | string,
+  signatoryKey: AcknowledgementSignatoryKey,
+): Promise<void> {
+  const response = await apiFetch(
+    `${API_BASE_URL}/api/v1/assign-hardware/${assignmentId}/acknowledgement-signatures/${signatoryKey}`,
+    {
+      method: "DELETE",
+    },
+  );
+  await assertOk(response);
 }
 
 export async function returnHardwareAssignment(

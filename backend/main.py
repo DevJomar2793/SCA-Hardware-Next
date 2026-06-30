@@ -5,7 +5,14 @@ from fastapi.staticfiles import StaticFiles
 import models
 from config import CORS_ORIGINS, STATIC_DIR
 from database import engine
-from routers import assignments, employees, hardware, images, imports
+from routers import (
+    acknowledgement_signatures,
+    assignments,
+    employees,
+    hardware,
+    images,
+    imports,
+)
 from schema_sync import (
     sync_assign_hardware_details_schema,
     sync_employee_details_schema,
@@ -35,3 +42,4 @@ app.include_router(assignments.router)
 app.include_router(employees.router)
 app.include_router(hardware.router)
 app.include_router(images.router)
+app.include_router(acknowledgement_signatures.router)

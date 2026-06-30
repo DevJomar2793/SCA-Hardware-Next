@@ -1,5 +1,6 @@
 from pydantic import BaseModel, field_validator
 from typing import Any, Optional, List
+import base64
 import re
 
 HARDWARE_TYPES_WITH_REQUIRED_SPECS = {
@@ -283,3 +284,42 @@ class AssignHardwareDetails(AssignHardwareBase):
 class DeployedHardwareItem(BaseModel):
     assignment: AssignHardwareDetails
     hardware: Hardware
+
+
+MAX_SIGNATURE_SIZE_BYTES = 500 * 1024
+PNG_DATA_URL_PREFIX = "data:image/png;base64,"
+
+
+class AcknowledgementSignatureUpsert(BaseModel):
+    signature_data: str
+
+    @field_validator("signature_data")
+    @classmethod
+    def validate_signature_data(cls, value: str):
+        if not value.startswith(PNG_DATA_URL_PREFIX):
+            raise ValueError("Signature must be a PNG data URL")
+
+        encoded_data = value[len(PNG_DATA_URL_PREFIX):]
+        try:
+            decoded_data = base64.b64decode(encoded_data, validate=True)
+        except (ValueError, base64.binascii.Error) as error:
+            raise ValueError("Signature contains invalid PNG data") from error
+
+        if not decoded_data.startswith(b"\x89PNG\r\n\x1a\n"):
+            raise ValueError("Signature data is not a valid PNG image")
+        if len(decoded_data) > MAX_SIGNATURE_SIZE_BYTES:
+            raise ValueError("Signature exceeds the 500 KB size limit")
+
+        return value
+
+
+class AcknowledgementSignature(BaseModel):
+    id: int
+    assignment_id: int
+    signatory_key: str
+    signature_data: str
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
+
+    class Config:
+        from_attributes = True
