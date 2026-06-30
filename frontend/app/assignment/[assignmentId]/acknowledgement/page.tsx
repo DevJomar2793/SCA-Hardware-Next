@@ -216,14 +216,39 @@ export default function AcknowledgementReportPage() {
           <ArrowLeft size={16} />
           Back to Hardware
         </Link>
-        <button
-          type="button"
-          onClick={() => window.print()}
-          className="inline-flex items-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
-        >
-          <Printer size={16} />
-          Print Report
-        </button>
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <button
+            type="button"
+            onClick={() => setIsSignaturePadOpen(true)}
+            className="inline-flex items-center gap-2 rounded-lg border border-purple-200 bg-white px-4 py-2 text-sm font-semibold text-purple-700 shadow-sm transition hover:bg-purple-50"
+          >
+            <PenLine size={16} />
+            {preparedBySignature ? "Redraw Signature" : "Add E-Signature"}
+          </button>
+          {preparedBySignature && (
+            <button
+              type="button"
+              onClick={() => void handleRemoveSignature()}
+              disabled={isRemovingSignature}
+              className="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-white px-4 py-2 text-sm font-semibold text-red-600 shadow-sm transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isRemovingSignature ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <Trash2 size={16} />
+              )}
+              Remove Signature
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => window.print()}
+            className="inline-flex items-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+          >
+            <Printer size={16} />
+            Print Report
+          </button>
+        </div>
       </div>
 
       <article className="acknowledgement-paper mx-auto bg-white text-black shadow-xl">
@@ -287,9 +312,6 @@ export default function AcknowledgementReportPage() {
               name="Jomar Cerrado"
               position="IT Personnel"
               signatureData={preparedBySignature?.signature_data}
-              onEditSignature={() => setIsSignaturePadOpen(true)}
-              onRemoveSignature={() => void handleRemoveSignature()}
-              isRemovingSignature={isRemovingSignature}
             />
             <SignatureBlock
               label="Issued By"
@@ -355,59 +377,24 @@ function SignatureBlock({
   position,
   showDate = false,
   signatureData,
-  onEditSignature,
-  onRemoveSignature,
-  isRemovingSignature = false,
 }: {
   label: string;
   name: string;
   position?: string;
   showDate?: boolean;
   signatureData?: string;
-  onEditSignature?: () => void;
-  onRemoveSignature?: () => void;
-  isRemovingSignature?: boolean;
 }) {
   return (
     <div className="report-signature-block">
-      {onEditSignature && (
-        <div
-          className={`report-signature-media ${signatureData ? "has-signature" : ""}`}
-        >
-          {signatureData && (
-            // A data URL from the drawing canvas cannot use Next.js image optimization.
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={signatureData}
-              alt={`${name} e-signature`}
-              className="report-signature-image"
-            />
-          )}
-          <div className="signature-screen-controls">
-            <button
-              type="button"
-              onClick={onEditSignature}
-              className="inline-flex items-center gap-1 text-[10px] font-semibold text-purple-700 hover:text-purple-900"
-            >
-              <PenLine size={12} />
-              {signatureData ? "Redraw" : "Add E-Signature"}
-            </button>
-            {signatureData && onRemoveSignature && (
-              <button
-                type="button"
-                onClick={onRemoveSignature}
-                disabled={isRemovingSignature}
-                className="inline-flex items-center gap-1 text-[10px] font-semibold text-red-600 hover:text-red-800 disabled:opacity-50"
-              >
-                {isRemovingSignature ? (
-                  <Loader2 size={12} className="animate-spin" />
-                ) : (
-                  <Trash2 size={12} />
-                )}
-                Remove
-              </button>
-            )}
-          </div>
+      {signatureData && (
+        <div className="report-signature-media has-signature">
+          {/* A canvas data URL cannot use Next.js image optimization. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={signatureData}
+            alt={`${name} e-signature`}
+            className="report-signature-image"
+          />
         </div>
       )}
       <p>

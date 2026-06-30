@@ -136,8 +136,8 @@ body {
   display: flex;
   align-items: flex-end;
   gap: 3mm;
-  margin-left: 26mm;
-  margin-bottom: 1mm;
+  margin-left: 25mm;
+  margin-bottom: 3mm;
 }
 
 .report-signature-media.has-signature {
