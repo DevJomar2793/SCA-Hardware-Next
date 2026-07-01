@@ -12,6 +12,7 @@ import {
   Square,
   RefreshCw,
   RotateCw,
+  History,
 } from "lucide-react";
 
 const menuItems = [
@@ -19,6 +20,7 @@ const menuItems = [
   { name: "Hardware", icon: HardDrive, href: "/hardware" },
   { name: "Employee", icon: RefreshCw, href: "/employee" },
   { name: "Assignment", icon: RotateCw, href: "/assignment" },
+  { name: "History", icon: History, href: "/history" },
   { name: "Analytics", icon: BarChart3, href: "/analytics" },
   { name: "Settings", icon: Settings, href: "/settings" },
 ];

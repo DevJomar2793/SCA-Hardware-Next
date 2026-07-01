@@ -323,3 +323,13 @@ class AcknowledgementSignature(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class HardwareHistoryBase(BaseModel):
+    device_id: Optional[int] = None
+    employee_id: Optional[int] = None
+    date_assigned: Optional[str] = None
+    date_returned: Optional[str] = None
+    status: Optional[str] = None
+    history: Optional[str] = None
+    notes: Optional[str] = None

@@ -130,6 +130,20 @@ class AcknowledgementSignature(Base):
         "AssignHardwareDetails",
         back_populates="acknowledgement_signatures",
     )
+
+class DeviceHistory(Base):
+    __tablename__ = "history_table"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    device_id = Column(Integer, ForeignKey("hardware_table.id"), nullable=False)
+    employee_id = Column(Integer, ForeignKey("employee_details.id"), nullable=False)
+    date_assigned = Column(String, nullable=False)
+    date_returned = Column(String, nullable=True)
+    status = Column(String, nullable=False)
+    history = Column(String, nullable=True)
+    notes = Column(String, nullable=True)
+    created_at = Column(String, default=current_timestamp)
+    updated_at = Column(String, default=current_timestamp, onupdate=current_timestamp)
     
     
     
