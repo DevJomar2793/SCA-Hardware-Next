@@ -27,6 +27,29 @@ ASSIGN_HARDWARE_DETAILS_COLUMNS = {
     "updated_at": "VARCHAR",
 }
 
+HISTORY_TABLE_COLUMNS = {
+    "assignment_id": "INTEGER",
+    "device_id": "INTEGER NOT NULL",
+    "employee_id": "INTEGER NOT NULL",
+    "date_assigned": "VARCHAR NOT NULL",
+    "date_returned": "VARCHAR",
+    "status": "VARCHAR NOT NULL",
+    "history": "VARCHAR",
+    "notes": "VARCHAR",
+    "device_ckt_item_number": "VARCHAR",
+    "device_hardware_type": "VARCHAR",
+    "device_manufacturer": "VARCHAR",
+    "device_model_number": "VARCHAR",
+    "device_serial_number": "VARCHAR",
+    "employee_digit_code": "VARCHAR",
+    "employee_first_name": "VARCHAR",
+    "employee_last_name": "VARCHAR",
+    "employee_position": "VARCHAR",
+    "employee_department": "VARCHAR",
+    "created_at": "VARCHAR",
+    "updated_at": "VARCHAR",
+}
+
 
 def sync_employee_details_schema(engine: Engine) -> None:
     inspector = inspect(engine)
@@ -230,6 +253,150 @@ def sync_assign_hardware_details_schema(engine: Engine) -> None:
                 "ix_assign_hardware_details_hardware_id "
                 "ON assign_hardware_details (hardware_id)"
             )
+        )
+
+
+def sync_history_schema(engine: Engine) -> None:
+    inspector = inspect(engine)
+    if "history_table" not in inspector.get_table_names():
+        return
+
+    existing_columns = {
+        column["name"]: column for column in inspector.get_columns("history_table")
+    }
+    foreign_keys = inspector.get_foreign_keys("history_table")
+
+    if engine.dialect.name == "sqlite" and (
+        any(column not in existing_columns for column in HISTORY_TABLE_COLUMNS)
+        or bool(foreign_keys)
+    ):
+        _rebuild_history_schema(engine, existing_columns)
+        inspector.clear_cache()
+        existing_columns = {
+            column["name"]: column
+            for column in inspector.get_columns("history_table")
+        }
+
+    missing_columns = {
+        column_name: column_type
+        for column_name, column_type in HISTORY_TABLE_COLUMNS.items()
+        if column_name not in existing_columns
+    }
+    if missing_columns:
+        with engine.begin() as connection:
+            for column_name, column_type in missing_columns.items():
+                connection.execute(
+                    text(
+                        f"ALTER TABLE history_table "
+                        f"ADD COLUMN {column_name} {column_type}"
+                    )
+                )
+
+    with engine.begin() as connection:
+        connection.execute(
+            text(
+                "UPDATE history_table SET updated_at = created_at "
+                "WHERE updated_at IS NULL"
+            )
+        )
+        connection.execute(
+            text(
+                "CREATE UNIQUE INDEX IF NOT EXISTS "
+                "ix_history_table_assignment_id "
+                "ON history_table (assignment_id)"
+            )
+        )
+        connection.execute(
+            text(
+                "CREATE INDEX IF NOT EXISTS ix_history_table_device_id "
+                "ON history_table (device_id)"
+            )
+        )
+        connection.execute(
+            text(
+                "CREATE INDEX IF NOT EXISTS ix_history_table_employee_id "
+                "ON history_table (employee_id)"
+            )
+        )
+
+
+def _rebuild_history_schema(engine: Engine, columns: dict) -> None:
+    def old_or_null(column_name: str) -> str:
+        return f"old.{column_name}" if column_name in columns else "NULL"
+
+    def snapshot_or_source(column_name: str, source_expression: str) -> str:
+        if column_name in columns:
+            return f"COALESCE(old.{column_name}, {source_expression})"
+        return source_expression
+
+    snapshot_expressions = {
+        "device_ckt_item_number": snapshot_or_source(
+            "device_ckt_item_number", "hardware.ckt_item_number"
+        ),
+        "device_hardware_type": snapshot_or_source(
+            "device_hardware_type", "hardware.hardware_type"
+        ),
+        "device_manufacturer": snapshot_or_source(
+            "device_manufacturer", "hardware.manufacturer"
+        ),
+        "device_model_number": snapshot_or_source(
+            "device_model_number", "hardware.model_number"
+        ),
+        "device_serial_number": snapshot_or_source(
+            "device_serial_number", "hardware.serial_number"
+        ),
+        "employee_digit_code": snapshot_or_source(
+            "employee_digit_code", "employee.employee_digit_code"
+        ),
+        "employee_first_name": snapshot_or_source(
+            "employee_first_name", "employee.first_name"
+        ),
+        "employee_last_name": snapshot_or_source(
+            "employee_last_name", "employee.last_name"
+        ),
+        "employee_position": snapshot_or_source(
+            "employee_position", "employee.position"
+        ),
+        "employee_department": snapshot_or_source(
+            "employee_department", "employee.department"
+        ),
+    }
+    ordered_columns = list(HISTORY_TABLE_COLUMNS)
+    select_expressions = {
+        column_name: old_or_null(column_name) for column_name in ordered_columns
+    }
+    select_expressions.update(snapshot_expressions)
+
+    with engine.begin() as connection:
+        connection.execute(text("DROP TABLE IF EXISTS history_table_new"))
+        connection.execute(
+            text(
+                "CREATE TABLE history_table_new ("
+                "id INTEGER NOT NULL PRIMARY KEY, "
+                + ", ".join(
+                    f"{column_name} {column_type}"
+                    for column_name, column_type in HISTORY_TABLE_COLUMNS.items()
+                )
+                + ")"
+            )
+        )
+        connection.execute(
+            text(
+                "INSERT INTO history_table_new (id, "
+                + ", ".join(ordered_columns)
+                + ") SELECT old.id, "
+                + ", ".join(
+                    select_expressions[column_name]
+                    for column_name in ordered_columns
+                )
+                + " FROM history_table old "
+                "LEFT JOIN hardware_table hardware ON hardware.id = old.device_id "
+                "LEFT JOIN employee_details employee ON employee.id = old.employee_id"
+            )
+        )
+        connection.execute(text("DROP TABLE history_table"))
+        connection.execute(
+            text("ALTER TABLE history_table_new RENAME TO history_table")
         )
 
 

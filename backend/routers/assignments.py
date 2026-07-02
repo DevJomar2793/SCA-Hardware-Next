@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 import models
 import schemas
 from database import get_db
+from routers.history import upsert_assignment_history
 
 
 router = APIRouter(prefix="/api/v1", tags=["assignments"])
@@ -229,6 +230,8 @@ def return_hardware_assignment(
     if db_assignment.date_returned is None:
         db_assignment.date_returned = models.current_timestamp()
 
+    upsert_assignment_history(db_assignment, db)
+
     db.commit()
     db.refresh(db_assignment)
     return db_assignment
@@ -246,5 +249,4 @@ def delete_hardware_assignment(
     db.delete(db_assignment)
     db.commit()
     return db_assignment
-
 

@@ -325,11 +325,55 @@ class AcknowledgementSignature(BaseModel):
         from_attributes = True
 
 
-class HardwareHistoryBase(BaseModel):
+class DeviceHistoryBase(BaseModel):
+    date_returned: Optional[str] = None
+    history: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class DeviceHistoryCreate(DeviceHistoryBase):
+    device_id: int
+    employee_id: int
+    date_assigned: str
+    status: str
+
+
+class DeviceHistoryUpdate(DeviceHistoryBase):
     device_id: Optional[int] = None
     employee_id: Optional[int] = None
     date_assigned: Optional[str] = None
-    date_returned: Optional[str] = None
     status: Optional[str] = None
-    history: Optional[str] = None
-    notes: Optional[str] = None
+
+
+class DeviceHistoryHardwareSnapshot(BaseModel):
+    id: int
+    ckt_item_number: Optional[str] = None
+    hardware_type: Optional[str] = None
+    manufacturer: Optional[str] = None
+    model_number: Optional[str] = None
+    serial_number: Optional[str] = None
+
+
+class DeviceHistoryEmployeeSnapshot(BaseModel):
+    id: int
+    employee_digit_code: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    position: Optional[str] = None
+    department: Optional[str] = None
+
+
+class DeviceHistoryDetails(DeviceHistoryBase):
+    id: int
+    assignment_id: Optional[int] = None
+    device_id: int
+    employee_id: int
+    date_assigned: str
+    status: str
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
+    hardware: DeviceHistoryHardwareSnapshot
+    employee: DeviceHistoryEmployeeSnapshot
+
+    class Config:
+        from_attributes = True

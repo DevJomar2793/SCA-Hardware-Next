@@ -133,18 +133,47 @@ class AcknowledgementSignature(Base):
 
 class DeviceHistory(Base):
     __tablename__ = "history_table"
-    
+
     id = Column(Integer, primary_key=True, index=True)
-    device_id = Column(Integer, ForeignKey("hardware_table.id"), nullable=False)
-    employee_id = Column(Integer, ForeignKey("employee_details.id"), nullable=False)
+    assignment_id = Column(Integer, unique=True, index=True, nullable=True)
+    device_id = Column(Integer, index=True, nullable=False)
+    employee_id = Column(Integer, index=True, nullable=False)
     date_assigned = Column(String, nullable=False)
     date_returned = Column(String, nullable=True)
     status = Column(String, nullable=False)
     history = Column(String, nullable=True)
     notes = Column(String, nullable=True)
+    device_ckt_item_number = Column(String, nullable=True)
+    device_hardware_type = Column(String, nullable=True)
+    device_manufacturer = Column(String, nullable=True)
+    device_model_number = Column(String, nullable=True)
+    device_serial_number = Column(String, nullable=True)
+    employee_digit_code = Column(String, nullable=True)
+    employee_first_name = Column(String, nullable=True)
+    employee_last_name = Column(String, nullable=True)
+    employee_position = Column(String, nullable=True)
+    employee_department = Column(String, nullable=True)
     created_at = Column(String, default=current_timestamp)
     updated_at = Column(String, default=current_timestamp, onupdate=current_timestamp)
-    
-    
-    
- 
+
+    @property
+    def hardware(self):
+        return {
+            "id": self.device_id,
+            "ckt_item_number": self.device_ckt_item_number,
+            "hardware_type": self.device_hardware_type,
+            "manufacturer": self.device_manufacturer,
+            "model_number": self.device_model_number,
+            "serial_number": self.device_serial_number,
+        }
+
+    @property
+    def employee(self):
+        return {
+            "id": self.employee_id,
+            "employee_digit_code": self.employee_digit_code,
+            "first_name": self.employee_first_name,
+            "last_name": self.employee_last_name,
+            "position": self.employee_position,
+            "department": self.employee_department,
+        }

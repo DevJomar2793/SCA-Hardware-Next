@@ -1,17 +1,6 @@
 import base64
-import os
-import tempfile
 
 import pytest
-
-
-database_file = tempfile.NamedTemporaryFile(
-    prefix="ckt-signature-test-",
-    suffix=".db",
-    delete=False,
-)
-database_file.close()
-os.environ["DATABASE_URL"] = f"sqlite:///{database_file.name}"
 
 from fastapi.testclient import TestClient  # noqa: E402
 
@@ -33,6 +22,7 @@ replacement_signature = "data:image/png;base64," + base64.b64encode(
 def assignment_id():
     db = SessionLocal()
     try:
+        db.query(models.DeviceHistory).delete()
         db.query(models.AcknowledgementSignature).delete()
         db.query(models.AssignHardwareDetails).delete()
         db.query(models.Hardware).delete()
