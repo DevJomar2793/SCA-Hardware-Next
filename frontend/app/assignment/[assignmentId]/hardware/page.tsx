@@ -132,10 +132,10 @@ export default function AssignmentHardwarePage() {
               <ArrowLeft size={16} />
               Back to Assignments
             </Link>
-            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-indigo-600">Deployment record</p>
-            <h1 className="page-title">
-              Deployed Hardware
-            </h1>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-indigo-600">
+              Deployment record
+            </p>
+            <h1 className="page-title">Deployed Hardware</h1>
             <p className="mt-1 text-sm text-slate-500">
               Assignment #{displayValue(assignmentId)}
             </p>
@@ -169,7 +169,7 @@ export default function AssignmentHardwarePage() {
                     className="inline-flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-xs font-semibold text-red-700 ring-1 ring-inset ring-red-200 transition hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
                   >
                     <MinusCircle size={15} />
-                    Remove Hardware
+                    Unassigned Hardware
                   </button>
                 </>
               )}
