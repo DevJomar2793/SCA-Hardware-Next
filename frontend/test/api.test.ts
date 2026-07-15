@@ -2,7 +2,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   deleteAcknowledgementSignature,
+  fetchHardwareReturnHistory,
   fetchHardwareList,
+  returnHardwareAssignment,
   saveAcknowledgementSignature,
 } from "@/services/api";
 
@@ -77,6 +79,49 @@ describe("API requests", () => {
         "/assign-hardware/42/acknowledgement-signatures/prepared_by",
       ),
       expect.objectContaining({ method: "DELETE" }),
+    );
+  });
+
+  it("requires a reason when returning hardware", async () => {
+    const responseBody = {
+      id: 42,
+      employee_details_id: 7,
+      hardware_id: 9,
+      date_assigned: "2026-07-01",
+      date_returned: "2026-07-15 10:00:00",
+      status: "Unassigned",
+      history: null,
+      notes: null,
+      created_at: null,
+      updated_at: null,
+    };
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify(responseBody), { status: 200 }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const returned = await returnHardwareAssignment(42, "Device replaced");
+
+    expect(returned.status).toBe("Unassigned");
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining("/assign-hardware/42/return"),
+      expect.objectContaining({
+        method: "PUT",
+        body: JSON.stringify({ return_reason: "Device replaced" }),
+      }),
+    );
+  });
+
+  it("fetches the read-only hardware return history", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify([]), { status: 200 }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    expect(await fetchHardwareReturnHistory()).toEqual([]);
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining("/api/v1/history/returns"),
+      expect.any(Object),
     );
   });
 });

@@ -141,6 +141,7 @@ class DeviceHistory(Base):
     date_assigned = Column(String, nullable=False)
     date_returned = Column(String, nullable=True)
     status = Column(String, nullable=False)
+    return_reason = Column(String, nullable=True)
     history = Column(String, nullable=True)
     notes = Column(String, nullable=True)
     device_ckt_item_number = Column(String, nullable=True)

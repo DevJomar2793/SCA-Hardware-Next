@@ -34,6 +34,7 @@ HISTORY_TABLE_COLUMNS = {
     "date_assigned": "VARCHAR NOT NULL",
     "date_returned": "VARCHAR",
     "status": "VARCHAR NOT NULL",
+    "return_reason": "VARCHAR",
     "history": "VARCHAR",
     "notes": "VARCHAR",
     "device_ckt_item_number": "VARCHAR",

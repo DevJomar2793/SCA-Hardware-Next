@@ -58,6 +58,7 @@ def test_history_schema_rebuild_preserves_rows_and_backfills_snapshots(tmp_path)
     inspector = inspect(engine)
     columns = {column["name"] for column in inspector.get_columns("history_table")}
     assert "assignment_id" in columns
+    assert "return_reason" in columns
     assert "device_model_number" in columns
     assert inspector.get_foreign_keys("history_table") == []
 

@@ -268,6 +268,18 @@ class AssignHardwareUpdate(AssignHardwareBase):
     pass
 
 
+class ReturnHardwareRequest(BaseModel):
+    return_reason: str
+
+    @field_validator("return_reason")
+    @classmethod
+    def validate_return_reason(cls, value: str):
+        reason = value.strip()
+        if not reason:
+            raise ValueError("Return reason is required")
+        return reason
+
+
 class AssignHardwareDetails(AssignHardwareBase):
     id: int
     employee_details_id: int
@@ -327,6 +339,7 @@ class AcknowledgementSignature(BaseModel):
 
 class DeviceHistoryBase(BaseModel):
     date_returned: Optional[str] = None
+    return_reason: Optional[str] = None
     history: Optional[str] = None
     notes: Optional[str] = None
 

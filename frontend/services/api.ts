@@ -17,6 +17,7 @@ import {
   AcknowledgementSignatoryKey,
   AcknowledgementSignature,
 } from "@/types/acknowledgement";
+import { HardwareReturnHistory } from "@/types/history";
 
 export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000";
@@ -161,13 +162,27 @@ export async function deleteAcknowledgementSignature(
 
 export async function returnHardwareAssignment(
   assignmentId: number | string,
+  returnReason: string,
 ): Promise<HardwareAssignment> {
   const response = await apiFetch(
     `${API_BASE_URL}/api/v1/assign-hardware/${assignmentId}/return`,
     {
       method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ return_reason: returnReason }),
     },
   );
+  await assertOk(response);
+
+  return response.json();
+}
+
+export async function fetchHardwareReturnHistory(): Promise<
+  HardwareReturnHistory[]
+> {
+  const response = await apiFetch(`${API_BASE_URL}/api/v1/history/returns`);
   await assertOk(response);
 
   return response.json();

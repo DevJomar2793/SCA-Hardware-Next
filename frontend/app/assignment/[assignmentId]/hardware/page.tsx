@@ -10,6 +10,7 @@ import {
   returnHardwareAssignment,
 } from "@/services/api";
 import { DeployedHardwareItem } from "@/types/assignment";
+import { ReturnHardwareModal } from "@/components/ReturnHardwareModal";
 
 const displayValue = (value: string | number | null | undefined) =>
   value === null || value === undefined || value === "" ? "-" : String(value);
@@ -51,9 +52,8 @@ export default function AssignmentHardwarePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showRemoveActions, setShowRemoveActions] = useState(false);
-  const [returningAssignmentId, setReturningAssignmentId] = useState<
-    number | null
-  >(null);
+  const [returnCandidate, setReturnCandidate] =
+    useState<DeployedHardwareItem | null>(null);
 
   const loadAssignedHardware = useCallback(async () => {
     if (!assignmentId || Number.isNaN(Number(assignmentId))) {
@@ -79,37 +79,30 @@ export default function AssignmentHardwarePage() {
     }
   }, [assignmentId]);
 
-  const handleReturnHardware = async (assignmentToReturnId: number) => {
+  const handleReturnHardware = async (
+    assignmentToReturnId: number,
+    returnReason: string,
+  ) => {
     const itemToReturn = deployedItems.find(
       (item) => item.assignment.id === assignmentToReturnId,
     );
     const modelName = itemToReturn?.hardware.model_number || "hardware";
 
-    try {
-      setReturningAssignmentId(assignmentToReturnId);
-      setError(null);
-      await returnHardwareAssignment(assignmentToReturnId);
-      setDeployedItems((currentItems) =>
-        currentItems.filter(
-          (item) => item.assignment.id !== assignmentToReturnId,
-        ),
-      );
-      void Swal.fire({
-        icon: "success",
-        title: "Hardware unassigned",
-        text: `You successfully unassigned "${modelName}"`,
-        timer: 1800,
-        showConfirmButton: false,
-      });
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Failed to remove deployed hardware.",
-      );
-    } finally {
-      setReturningAssignmentId(null);
-    }
+    setError(null);
+    await returnHardwareAssignment(assignmentToReturnId, returnReason);
+    setDeployedItems((currentItems) =>
+      currentItems.filter(
+        (item) => item.assignment.id !== assignmentToReturnId,
+      ),
+    );
+    setReturnCandidate(null);
+    void Swal.fire({
+      icon: "success",
+      title: "Hardware unassigned",
+      text: `You successfully unassigned "${modelName}"`,
+      timer: 1800,
+      showConfirmButton: false,
+    });
   };
 
   useEffect(() => {
@@ -255,9 +248,6 @@ export default function AssignmentHardwarePage() {
                 <tbody className="divide-y divide-gray-100">
                   {deployedItems.map((deployedItem) => {
                     const item = deployedItem.hardware;
-                    const isReturning =
-                      returningAssignmentId === deployedItem.assignment.id;
-
                     return (
                       <tr
                         key={deployedItem.assignment.id}
@@ -312,14 +302,11 @@ export default function AssignmentHardwarePage() {
                             <button
                               type="button"
                               onClick={() =>
-                                void handleReturnHardware(
-                                  deployedItem.assignment.id,
-                                )
+                                setReturnCandidate(deployedItem)
                               }
-                              disabled={isReturning}
-                              className="inline-flex min-w-24 items-center justify-center rounded-lg bg-emerald-50 px-3 py-1.5 text-sm font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-600/20 transition-colors hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
+                              className="inline-flex min-w-24 items-center justify-center rounded-lg bg-amber-50 px-3 py-1.5 text-sm font-semibold text-amber-700 ring-1 ring-inset ring-amber-600/20 transition-colors hover:bg-amber-100"
                             >
-                              {isReturning ? "Removing..." : "Assigned"}
+                              Unassign
                             </button>
                           </td>
                         )}
@@ -332,6 +319,19 @@ export default function AssignmentHardwarePage() {
           )}
         </section>
       </div>
+      {returnCandidate && (
+        <ReturnHardwareModal
+          hardwareName={
+            returnCandidate.hardware.model_number ||
+            returnCandidate.hardware.ckt_item_number ||
+            "this hardware"
+          }
+          onClose={() => setReturnCandidate(null)}
+          onConfirm={(returnReason) =>
+            handleReturnHardware(returnCandidate.assignment.id, returnReason)
+          }
+        />
+      )}
     </main>
   );
 }

@@ -45,54 +45,98 @@ def history_sources():
         db.close()
 
 
-def create_manual_history(history_sources):
-    return client.post(
-        "/api/v1/history",
+def create_assignment(history_sources):
+    response = client.post(
+        "/api/v1/assign-hardware",
         json={
-            "device_id": history_sources["hardware_id"],
-            "employee_id": history_sources["employee_id"],
-            "date_assigned": "2026-06-01",
-            "date_returned": "2026-07-01",
-            "status": "Returned",
-            "history": "Initial deployment",
-            "notes": "Returned in good condition",
+            "employee_details_id": history_sources["employee_id"],
+            "hardware_id": history_sources["hardware_id"],
+            "date_assigned": "2026-06-15",
+            "status": "Assigned",
         },
     )
-
-
-def test_manual_history_crud_and_filters(history_sources):
-    response = create_manual_history(history_sources)
     assert response.status_code == 201
-    record = response.json()
-    assert record["assignment_id"] is None
+    return response.json()[0]["id"]
+
+
+def return_assignment(assignment_id, reason="Scheduled equipment replacement"):
+    return client.put(
+        f"/api/v1/assign-hardware/{assignment_id}/return",
+        json={"return_reason": reason},
+    )
+
+
+def test_return_requires_reason_and_creates_snapshot(history_sources):
+    assignment_id = create_assignment(history_sources)
+
+    assert return_assignment(assignment_id, "   ").status_code == 422
+    assert client.put(
+        f"/api/v1/assign-hardware/{assignment_id}/return"
+    ).status_code == 422
+
+    db = SessionLocal()
+    try:
+        assignment = db.get(models.AssignHardwareDetails, assignment_id)
+        assert assignment.status == "Assigned"
+        assert assignment.date_returned is None
+        assert db.query(models.DeviceHistory).count() == 0
+    finally:
+        db.close()
+
+    response = return_assignment(assignment_id, "  Employee upgrade completed  ")
+    assert response.status_code == 200
+    assignment = response.json()
+    assert assignment["status"] == "Unassigned"
+    assert assignment["date_returned"] is not None
+
+    records = client.get("/api/v1/history/returns").json()
+    assert len(records) == 1
+    record = records[0]
+    assert record["assignment_id"] == assignment_id
+    assert record["return_reason"] == "Employee upgrade completed"
+    assert record["date_returned"] == assignment["date_returned"]
     assert record["hardware"]["ckt_item_number"] == "CKT-HISTORY"
+    assert record["hardware"]["serial_number"] == "HISTORY-TEST-SERIAL"
     assert record["employee"]["first_name"] == "Ana"
+    assert record["employee"]["last_name"] == "Santos"
 
-    response = client.get(
-        "/api/v1/history",
-        params={
-            "device_id": history_sources["hardware_id"],
-            "employee_id": history_sources["employee_id"],
-            "status": "returned",
-        },
-    )
-    assert response.status_code == 200
-    assert [item["id"] for item in response.json()] == [record["id"]]
 
+def test_return_history_is_immutable_and_return_is_not_repeatable(history_sources):
+    assignment_id = create_assignment(history_sources)
+    assert return_assignment(assignment_id, "Original audit reason").status_code == 200
+    record = client.get("/api/v1/history/returns").json()[0]
+
+    repeat = return_assignment(assignment_id, "Attempted replacement reason")
+    assert repeat.status_code == 409
+    assert client.get(f"/api/v1/history/{record['id']}").json()[
+        "return_reason"
+    ] == "Original audit reason"
+
+    assert client.post("/api/v1/history", json={}).status_code == 405
+    assert client.put(
+        f"/api/v1/history/{record['id']}", json={"return_reason": "Changed"}
+    ).status_code == 405
+    assert client.delete(f"/api/v1/history/{record['id']}").status_code == 405
+
+
+def test_generic_assignment_update_cannot_bypass_return_reason(history_sources):
+    assignment_id = create_assignment(history_sources)
     response = client.put(
-        f"/api/v1/history/{record['id']}",
-        json={"notes": "Updated condition note"},
+        f"/api/v1/assign-hardware/{assignment_id}",
+        json={"status": "Unassigned"},
     )
-    assert response.status_code == 200
-    assert response.json()["notes"] == "Updated condition note"
-
-    assert client.get(f"/api/v1/history/{record['id']}").status_code == 200
-    assert client.delete(f"/api/v1/history/{record['id']}").status_code == 204
-    assert client.get(f"/api/v1/history/{record['id']}").status_code == 404
+    assert response.status_code == 422
+    assert "return endpoint" in response.json()["detail"]
+    delete_response = client.delete(f"/api/v1/assign-hardware/{assignment_id}")
+    assert delete_response.status_code == 422
+    assert "return reason" in delete_response.json()["detail"]
+    assert client.get("/api/v1/history/returns").json() == []
 
 
 def test_history_snapshots_survive_source_changes_and_deletion(history_sources):
-    record = create_manual_history(history_sources).json()
+    assignment_id = create_assignment(history_sources)
+    assert return_assignment(assignment_id, "End of deployment").status_code == 200
+    record = client.get("/api/v1/history/returns").json()[0]
 
     db = SessionLocal()
     try:
@@ -117,61 +161,32 @@ def test_history_snapshots_survive_source_changes_and_deletion(history_sources):
     assert client.get(f"/api/v1/history/{record['id']}").status_code == 200
 
 
-def test_return_upserts_one_history_record(history_sources):
-    assignment_response = client.post(
-        "/api/v1/assign-hardware",
-        json={
-            "employee_details_id": history_sources["employee_id"],
-            "hardware_id": history_sources["hardware_id"],
-            "date_assigned": "2026-06-15",
-            "status": "Assigned",
-            "history": "First value",
-        },
-    )
-    assignment_id = assignment_response.json()[0]["id"]
-
-    assert client.put(
-        f"/api/v1/assign-hardware/{assignment_id}/return"
-    ).status_code == 200
+def test_return_history_is_sorted_by_returned_date_descending(history_sources):
+    first_assignment_id = create_assignment(history_sources)
+    assert return_assignment(first_assignment_id, "First return").status_code == 200
+    second_assignment_id = create_assignment(history_sources)
+    assert return_assignment(second_assignment_id, "Second return").status_code == 200
 
     db = SessionLocal()
     try:
-        assignment = db.get(models.AssignHardwareDetails, assignment_id)
-        hardware = db.get(models.Hardware, history_sources["hardware_id"])
-        assignment.history = "Refreshed value"
-        hardware.model_number = "Refreshed Model"
+        first = (
+            db.query(models.DeviceHistory)
+            .filter(models.DeviceHistory.assignment_id == first_assignment_id)
+            .one()
+        )
+        second = (
+            db.query(models.DeviceHistory)
+            .filter(models.DeviceHistory.assignment_id == second_assignment_id)
+            .one()
+        )
+        first.date_returned = "2026-07-14 09:00:00"
+        second.date_returned = "2026-07-15 09:00:00"
         db.commit()
     finally:
         db.close()
 
-    assert client.put(
-        f"/api/v1/assign-hardware/{assignment_id}/return"
-    ).status_code == 200
-    records = client.get(
-        "/api/v1/history",
-        params={"device_id": history_sources["hardware_id"]},
-    ).json()
-    assert len(records) == 1
-    assert records[0]["assignment_id"] == assignment_id
-    assert records[0]["history"] == "Refreshed value"
-    assert records[0]["hardware"]["model_number"] == "Refreshed Model"
-
-
-def test_history_validates_references_and_required_updates(history_sources):
-    invalid_create = client.post(
-        "/api/v1/history",
-        json={
-            "device_id": 999999,
-            "employee_id": history_sources["employee_id"],
-            "date_assigned": "2026-06-01",
-            "status": "Returned",
-        },
-    )
-    assert invalid_create.status_code == 404
-
-    record = create_manual_history(history_sources).json()
-    invalid_update = client.put(
-        f"/api/v1/history/{record['id']}",
-        json={"status": None},
-    )
-    assert invalid_update.status_code == 422
+    records = client.get("/api/v1/history/returns").json()
+    assert [record["assignment_id"] for record in records] == [
+        second_assignment_id,
+        first_assignment_id,
+    ]

@@ -7,12 +7,12 @@ from sqlalchemy.orm import Session
 import models
 import schemas
 from database import get_db
-from routers.history import upsert_assignment_history
+from routers.history import create_return_history
 
 
 router = APIRouter(prefix="/api/v1", tags=["assignments"])
 
-RETURNED_STATUS = "returned"
+INACTIVE_STATUSES = {"returned", "unassigned"}
 
 
 def get_assignment_or_404(
@@ -50,7 +50,10 @@ def ensure_hardware_exists(hardware_id: int, db: Session) -> None:
 
 
 def is_active_assignment_data(status: str | None, date_returned: str | None) -> bool:
-    return date_returned is None and (status or "").strip().lower() != RETURNED_STATUS
+    return (
+        date_returned is None
+        and (status or "").strip().lower() not in INACTIVE_STATUSES
+    )
 
 
 def ensure_hardware_is_available(
@@ -61,7 +64,7 @@ def ensure_hardware_is_available(
     query = db.query(models.AssignHardwareDetails).filter(
         models.AssignHardwareDetails.hardware_id == hardware_id,
         models.AssignHardwareDetails.date_returned.is_(None),
-        func.lower(models.AssignHardwareDetails.status) != RETURNED_STATUS,
+        func.lower(models.AssignHardwareDetails.status).notin_(INACTIVE_STATUSES),
     )
     if assignment_id is not None:
         query = query.filter(models.AssignHardwareDetails.id != assignment_id)
@@ -156,7 +159,7 @@ def read_hardware_items_for_assignment(
             models.AssignHardwareDetails.employee_details_id
             == db_assignment.employee_details_id,
             models.AssignHardwareDetails.date_returned.is_(None),
-            func.lower(models.AssignHardwareDetails.status) != RETURNED_STATUS,
+            func.lower(models.AssignHardwareDetails.status).notin_(INACTIVE_STATUSES),
         )
         .order_by(models.AssignHardwareDetails.id.desc())
         .all()
@@ -202,6 +205,15 @@ def update_hardware_assignment(
     status = update_data.get("status", db_assignment.status)
     date_returned = update_data.get("date_returned", db_assignment.date_returned)
 
+    if is_active_assignment_data(
+        db_assignment.status,
+        db_assignment.date_returned,
+    ) and not is_active_assignment_data(status, date_returned):
+        raise HTTPException(
+            status_code=422,
+            detail="Use the return endpoint and provide a return reason to unassign hardware",
+        )
+
     if "employee_details_id" in update_data:
         ensure_employee_exists(employee_details_id, db)
     if "hardware_id" in update_data:
@@ -223,14 +235,19 @@ def update_hardware_assignment(
 )
 def return_hardware_assignment(
     assignment_id: int,
+    return_data: schemas.ReturnHardwareRequest,
     db: Session = Depends(get_db),
 ):
     db_assignment = get_assignment_or_404(assignment_id, db)
-    db_assignment.status = "Returned"
-    if db_assignment.date_returned is None:
-        db_assignment.date_returned = models.current_timestamp()
+    if not is_active_assignment_data(
+        db_assignment.status,
+        db_assignment.date_returned,
+    ):
+        raise HTTPException(status_code=409, detail="Hardware is already unassigned")
 
-    upsert_assignment_history(db_assignment, db)
+    db_assignment.status = "Unassigned"
+    db_assignment.date_returned = models.current_timestamp()
+    create_return_history(db_assignment, return_data.return_reason, db)
 
     db.commit()
     db.refresh(db_assignment)
@@ -246,7 +263,14 @@ def delete_hardware_assignment(
     db: Session = Depends(get_db),
 ):
     db_assignment = get_assignment_or_404(assignment_id, db)
+    if is_active_assignment_data(
+        db_assignment.status,
+        db_assignment.date_returned,
+    ):
+        raise HTTPException(
+            status_code=422,
+            detail="Active assignments must be returned with a return reason before deletion",
+        )
     db.delete(db_assignment)
     db.commit()
     return db_assignment
-
