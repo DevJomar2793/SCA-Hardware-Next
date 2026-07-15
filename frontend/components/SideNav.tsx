@@ -1,97 +1,185 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import {
-  LayoutDashboard,
-  HardDrive,
   BarChart3,
-  Settings,
-  LogOut,
-  Square,
-  RefreshCw,
-  RotateCw,
+  Boxes,
+  HardDrive,
   History,
+  LayoutDashboard,
+  Menu,
+  RotateCw,
+  Settings,
+  Users,
+  X,
 } from "lucide-react";
 
 const menuItems = [
   { name: "Overview", icon: LayoutDashboard, href: "/" },
   { name: "Hardware", icon: HardDrive, href: "/hardware" },
-  { name: "Employee", icon: RefreshCw, href: "/employee" },
-  { name: "Assignment", icon: RotateCw, href: "/assignment" },
+  { name: "Employees", icon: Users, href: "/employee" },
+  { name: "Assignments", icon: RotateCw, href: "/assignment" },
   { name: "History", icon: History, href: "/history" },
-  { name: "Analytics", icon: BarChart3, href: "/analytics" },
-  { name: "Settings", icon: Settings, href: "/settings" },
 ];
 
-export const SideNav: React.FC = () => {
-  const pathname = usePathname();
-  const [clientPathname, setClientPathname] = useState("");
+const futureItems = [
+  { name: "Analytics", icon: BarChart3 },
+  { name: "Settings", icon: Settings },
+];
 
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      setClientPathname(pathname);
-    }, 0);
-
-    return () => window.clearTimeout(timer);
-  }, [pathname]);
-
+function NavigationContent({
+  pathname,
+  onNavigate,
+}: {
+  pathname: string;
+  onNavigate?: () => void;
+}) {
   return (
-    <div className="app-navigation w-64 bg-[#0f172a] text-slate-300 h-full flex flex-col">
-      {/* Brand Logo */}
-      <div className="p-6 flex items-center gap-3 border-b border-slate-800">
-        <div className="w-8 h-8 bg-purple-600 rounded-md flex items-center justify-center">
-          <Square className="text-white w-5 h-5 fill-current" />
+    <>
+      <div className="flex h-20 items-center gap-3 border-b border-white/10 px-5">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500 text-white shadow-lg shadow-indigo-950/25">
+          <Boxes size={21} strokeWidth={2.2} />
         </div>
-        <span className="text-white font-bold text-lg tracking-tight">
-          CKT Hardware
-        </span>
+        <div>
+          <p className="font-semibold tracking-tight text-white">CKT Hardware</p>
+          <p className="mt-0.5 text-[11px] font-medium uppercase tracking-[0.16em] text-slate-400">
+            Inventory system
+          </p>
+        </div>
       </div>
 
-      {/* Navigation Menu */}
-      <nav className="flex-1 p-4 space-y-2">
-        {menuItems.map((item) => {
-          const isActive =
-            clientPathname === item.href ||
-            (item.href !== "/" && clientPathname.startsWith(`${item.href}/`));
-          return (
-            <Link
+      <nav aria-label="Primary navigation" className="flex-1 overflow-y-auto px-3 py-5">
+        <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+          Workspace
+        </p>
+        <div className="space-y-1">
+          {menuItems.map((item) => {
+            const isActive =
+              pathname === item.href ||
+              (item.href !== "/" && pathname.startsWith(`${item.href}/`));
+
+            return (
+              <Link
+                key={item.name}
+                href={item.href}
+                onClick={onNavigate}
+                aria-current={isActive ? "page" : undefined}
+                className={`group flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm font-medium transition-colors ${
+                  isActive
+                    ? "bg-indigo-500 text-white shadow-sm"
+                    : "text-slate-300 hover:bg-white/8 hover:text-white"
+                }`}
+              >
+                <item.icon
+                  size={19}
+                  className={isActive ? "text-white" : "text-slate-400 group-hover:text-white"}
+                />
+                <span>{item.name}</span>
+              </Link>
+            );
+          })}
+        </div>
+
+        <div className="my-5 border-t border-white/10" />
+        <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+          Planning
+        </p>
+        <div className="space-y-1">
+          {futureItems.map((item) => (
+            <div
               key={item.name}
-              href={item.href}
-              className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-all ${
-                isActive
-                  ? "bg-purple-600/20 text-purple-400"
-                  : "hover:bg-slate-800 hover:text-white"
-              }`}
+              aria-disabled="true"
+              title={`${item.name} — coming soon`}
+              className="flex min-h-11 cursor-not-allowed items-center gap-3 rounded-xl px-3 text-sm font-medium text-slate-500"
             >
-              <item.icon size={20} />
-              <span className="text-sm font-medium">{item.name}</span>
-            </Link>
-          );
-        })}
+              <item.icon size={19} />
+              <span>{item.name}</span>
+              <span className="ml-auto rounded-full border border-slate-700 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-slate-500">
+                Soon
+              </span>
+            </div>
+          ))}
+        </div>
       </nav>
 
-      {/* User Profile */}
-      <div className="p-4 border-t border-slate-800 bg-slate-900/50">
-        <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-800 cursor-pointer transition-colors">
-          <div className="w-9 h-9 rounded-full bg-slate-700 border border-slate-600 flex items-center justify-center text-xs text-white font-bold">
-            AU
+      <div className="border-t border-white/10 p-4">
+        <div className="flex items-center gap-3 rounded-xl bg-white/5 p-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-700 text-xs font-bold text-white">
+            IA
           </div>
-          <div className="flex-1 overflow-hidden">
-            <p className="text-sm font-medium text-white truncate">
-              Admin User
-            </p>
-            <p className="text-xs text-slate-500 truncate">
-              admin@ckthardware.com
-            </p>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-medium text-white">Inventory Admin</p>
+            <p className="truncate text-xs text-slate-400">Operations workspace</p>
           </div>
-          <LogOut
-            size={16}
-            className="text-slate-500 hover:text-red-400 transition-colors"
-          />
         </div>
       </div>
-    </div>
+    </>
   );
-};
+}
+
+export function SideNav() {
+  const pathname = usePathname();
+  const [isOpen, setIsOpen] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setIsOpen(false);
+    };
+    document.addEventListener("keydown", closeOnEscape);
+    return () => document.removeEventListener("keydown", closeOnEscape);
+  }, [isOpen]);
+
+  return (
+    <>
+      <aside className="app-navigation hidden h-full w-64 shrink-0 flex-col bg-[#111827] text-slate-300 lg:flex">
+        <NavigationContent pathname={pathname} />
+      </aside>
+
+      <header className="app-navigation fixed inset-x-0 top-0 z-40 flex h-16 items-center justify-between border-b border-slate-200 bg-white/95 px-4 backdrop-blur lg:hidden">
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-600 text-white">
+            <Boxes size={19} />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-slate-900">CKT Hardware</p>
+            <p className="text-[10px] uppercase tracking-[0.12em] text-slate-500">Inventory system</p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => setIsOpen(true)}
+          aria-label="Open navigation"
+          aria-expanded={isOpen}
+          className="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50"
+        >
+          <Menu size={21} />
+        </button>
+      </header>
+
+      {isOpen && (
+        <div className="app-navigation fixed inset-0 z-50 lg:hidden">
+          <button
+            type="button"
+            aria-label="Close navigation"
+            className="absolute inset-0 bg-slate-950/50 backdrop-blur-sm"
+            onClick={() => setIsOpen(false)}
+          />
+          <aside className="relative flex h-full w-[min(20rem,86vw)] flex-col bg-[#111827] shadow-2xl">
+            <button
+              type="button"
+              aria-label="Close navigation"
+              onClick={() => setIsOpen(false)}
+              className="absolute right-3 top-5 z-10 flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 hover:bg-white/10 hover:text-white"
+            >
+              <X size={20} />
+            </button>
+            <NavigationContent pathname={pathname} onNavigate={() => setIsOpen(false)} />
+          </aside>
+        </div>
+      )}
+    </>
+  );
+}

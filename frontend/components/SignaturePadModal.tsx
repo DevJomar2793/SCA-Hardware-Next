@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Eraser, Loader2, PenLine, X } from "lucide-react";
+import { useDialogFocus } from "@/lib/use-dialog-focus";
 
 interface SignaturePadModalProps {
   signatoryName: string;
@@ -19,6 +20,7 @@ export function SignaturePadModal({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const isDrawingRef = useRef(false);
   const [hasInk, setHasInk] = useState(false);
+  const { dialogRef, trapFocus } = useDialogFocus();
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -99,7 +101,7 @@ export function SignaturePadModal({
       aria-modal="true"
       aria-labelledby="signature-dialog-title"
     >
-      <div className="w-full max-w-2xl rounded-2xl bg-white p-6 shadow-2xl">
+      <div ref={dialogRef} onKeyDown={trapFocus} className="w-full max-w-2xl rounded-2xl bg-white p-6 shadow-2xl">
         <div className="mb-5 flex items-start justify-between gap-4">
           <div>
             <h2

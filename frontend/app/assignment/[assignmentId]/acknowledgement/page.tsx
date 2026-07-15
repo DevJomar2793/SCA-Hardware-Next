@@ -348,7 +348,7 @@ export default function AcknowledgementReportPage() {
 
 function ReportState({ children }: { children: React.ReactNode }) {
   return (
-    <main className="flex min-h-full flex-col items-center justify-center gap-4 bg-sky-50 p-8">
+    <main className="page-shell flex min-h-full flex-col items-center justify-center gap-4">
       {children}
     </main>
   );

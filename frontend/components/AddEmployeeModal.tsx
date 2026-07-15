@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Loader2, X } from "lucide-react";
 import { motion } from "framer-motion";
 import Swal from "sweetalert2";
@@ -10,6 +10,7 @@ import {
   EmployeeDetails,
   UpdateEmployeePayload,
 } from "@/types/employee";
+import { useDialogFocus } from "@/lib/use-dialog-focus";
 
 interface AddEmployeeModalProps {
   employee?: EmployeeDetails;
@@ -67,6 +68,15 @@ export const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
     useState<AddEmployeePayload>(() => getInitialFormData(employee));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { dialogRef, trapFocus } = useDialogFocus();
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !isSubmitting) onClose();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isSubmitting, onClose]);
 
   const handleChange = (
     e: React.ChangeEvent<
@@ -159,13 +169,18 @@ export const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
       />
 
       <motion.div
+        ref={dialogRef}
+        onKeyDown={trapFocus}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="employee-dialog-title"
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
         className="relative bg-white w-full max-w-3xl text-gray-600 rounded-2xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col max-h-[90vh]"
       >
         <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-          <h2 className="text-xl font-bold text-slate-800">
+          <h2 id="employee-dialog-title" className="text-xl font-bold text-slate-800">
             {isEditMode ? "Edit Employee" : "Add New Employee"}
           </h2>
           <button
@@ -336,18 +351,18 @@ export const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
             </section>
           </div>
 
-          <div className="mt-8 flex justify-end gap-3 pt-4 border-t border-gray-100">
+          <div className="sticky bottom-0 -mx-6 -mb-6 mt-8 flex justify-end gap-3 border-t border-gray-100 bg-white px-6 py-4">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 border border-gray-200 text-slate-600 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+              className="button-secondary"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="bg-purple-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-purple-700 transition-colors flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+              className="button-primary"
             >
               {isSubmitting && <Loader2 size={18} className="animate-spin" />}
               {isSubmitting

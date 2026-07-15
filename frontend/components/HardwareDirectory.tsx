@@ -5,8 +5,6 @@ import Link from "next/link";
 import {
   Search,
   Filter,
-  LayoutGrid,
-  List,
   Plus,
   Loader2,
   FileUp,
@@ -25,6 +23,7 @@ import { Hardware, HardwareSortConfig } from "@/types/hardware";
 import { AddHardwareModal } from "./AddHardwareModal";
 import { AnimatePresence } from "framer-motion";
 import { useRef } from "react";
+import Swal from "sweetalert2";
 
 interface HardwareDirectoryProps {
   hardwareItems: Hardware[];
@@ -73,9 +72,12 @@ export const HardwareDirectory: React.FC<HardwareDirectoryProps> = ({
       onErrorChange(null);
       const result = await importExcel(file);
       console.log("Import successful:", result);
-      alert(
-        `Successfully imported ${result.imported} items. ${result.skipped} items were skipped.`,
-      );
+      void Swal.fire({
+        icon: "success",
+        title: "Import complete",
+        text: `${result.imported} items imported. ${result.skipped} items skipped.`,
+        confirmButtonColor: "#4f46e5",
+      });
       await onReload();
     } catch (err) {
       console.error("Import failed:", err);
@@ -120,15 +122,15 @@ export const HardwareDirectory: React.FC<HardwareDirectoryProps> = ({
 
   if (error) {
     return (
-      <div className="flex-1 bg-sky-50 p-8 flex flex-col items-center justify-center">
-        <div className="bg-white p-8 rounded-xl shadow-sm border border-red-200 text-center max-w-md">
+      <div className="page-shell flex flex-1 flex-col items-center justify-center">
+        <div className="surface-card max-w-md p-8 text-center">
           <p className="text-red-600 font-semibold mb-4">
             Error loading hardware data
           </p>
           <p className="text-slate-600 mb-6 text-sm">{error}</p>
           <button
             onClick={() => void onReload()}
-            className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors"
+            className="button-primary"
           >
             Retry
           </button>
@@ -138,16 +140,18 @@ export const HardwareDirectory: React.FC<HardwareDirectoryProps> = ({
   }
 
   return (
-    <div className="flex-1 bg-sky-50 p-8 flex flex-col">
-      {/* Header */}
-      <div className="flex justify-between items-center mb-8 shrink-0">
-        <h1 className="text-3xl font-bold text-slate-800">
-          Hardware Directory
-        </h1>
-        <div className="flex items-center gap-3">
+    <main className="page-shell flex flex-1 flex-col">
+      <div className="page-container flex flex-1 flex-col">
+      <header className="mb-7 flex shrink-0 flex-col justify-between gap-5 md:flex-row md:items-end">
+        <div>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-indigo-600">Asset management</p>
+          <h1 className="page-title">Hardware</h1>
+          <p className="page-description">Search, review, and maintain the company hardware inventory.</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={() => setIsAddModalOpen(true)}
-            className="bg-white text-slate-700 px-4 py-2 rounded-lg shadow-sm border border-gray-200 font-medium hover:bg-gray-50 transition-colors flex items-center gap-2"
+            className="button-primary"
           >
             <Plus size={18} />
             Add Hardware
@@ -155,7 +159,7 @@ export const HardwareDirectory: React.FC<HardwareDirectoryProps> = ({
           <button
             onClick={handleImportClick}
             disabled={isImporting}
-            className={`bg-white text-slate-700 px-4 py-2 rounded-lg shadow-sm border border-gray-200 font-medium hover:bg-gray-50 transition-colors flex items-center gap-2 ${isImporting ? "opacity-70 cursor-not-allowed" : "cursor-pointer"}`}
+            className="button-secondary"
           >
             {isImporting ? (
               <Loader2 size={18} className="animate-spin" />
@@ -172,13 +176,11 @@ export const HardwareDirectory: React.FC<HardwareDirectoryProps> = ({
             onChange={handleImportExcel}
           />
         </div>
-      </div>
+      </header>
 
-      {/* Main Table Card */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex-1 flex flex-col overflow-hidden">
-        {/* Table Controls */}
-        <div className="p-4 border-b border-gray-100 flex flex-wrap items-center gap-4 shrink-0">
-          <div className="relative flex-1 max-w-md">
+      <div className="surface-card flex flex-1 flex-col overflow-hidden">
+        <div className="data-toolbar flex shrink-0 flex-wrap items-center gap-3 border-b border-slate-100 p-4">
+          <div className="relative min-w-56 max-w-md flex-1">
             <Search
               className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
               size={18}
@@ -187,19 +189,25 @@ export const HardwareDirectory: React.FC<HardwareDirectoryProps> = ({
               type="text"
               placeholder="Search hardware..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1);
+              }}
               className="w-full pl-10 pr-4 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all"
             />
           </div>
-          <div className="flex items-center gap-2">
+          <div className="ml-auto flex flex-wrap items-center gap-2">
             <div className="flex items-center gap-2">
               <Filter size={16} className="text-gray-400" />
               <select
                 value={filterType}
-                onChange={(e) => setFilterType(e.target.value)}
+                onChange={(e) => {
+                  setFilterType(e.target.value);
+                  setCurrentPage(1);
+                }}
                 className="px-3 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors outline-none focus:ring-2 focus:ring-purple-500/20"
               >
-                <option value="All">ALL HARDWARE TYPES</option>
+                <option value="All">All hardware types</option>
                 {[...new Set(hardwareItems.map((item) => item.hardware_type))]
                   .sort()
                   .map((type) => (
@@ -209,14 +217,11 @@ export const HardwareDirectory: React.FC<HardwareDirectoryProps> = ({
                   ))}
               </select>
             </div>
-            <div className="flex border border-gray-200 rounded-lg overflow-hidden">
-              <button className="p-2 bg-gray-100 text-gray-600 border-r border-gray-200">
-                <List size={16} />
+            {(searchTerm || filterType !== "All") && (
+              <button type="button" onClick={() => { setSearchTerm(""); setFilterType("All"); setCurrentPage(1); }} className="button-secondary">
+                Reset
               </button>
-              <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-colors">
-                <LayoutGrid size={16} />
-              </button>
-            </div>
+            )}
           </div>
         </div>
 
@@ -234,7 +239,7 @@ export const HardwareDirectory: React.FC<HardwareDirectoryProps> = ({
               <p>No hardware items found.</p>
             </div>
           ) : (
-            <table className="w-full text-left border-collapse">
+            <table className="data-table w-full min-w-[880px] border-collapse text-left">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-100 sticky top-0 z-10">
                   <th
@@ -296,7 +301,7 @@ export const HardwareDirectory: React.FC<HardwareDirectoryProps> = ({
                     <td className="px-6 py-4 text-sm font-medium">
                       <Link
                         href={`/hardware/${item.id}`}
-                        className="text-purple-600 hover:text-purple-800 font-semibold hover:underline transition-colors"
+                        className="font-semibold text-indigo-600 transition-colors hover:text-indigo-800 hover:underline"
                       >
                         {item.ckt_item_number}
                       </Link>
@@ -324,7 +329,7 @@ export const HardwareDirectory: React.FC<HardwareDirectoryProps> = ({
         </div>
 
         {/* Table Footer */}
-        <div className="p-4 border-t border-gray-100 flex items-center justify-between text-sm text-gray-500 shrink-0">
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-slate-100 p-4 text-sm text-slate-500">
           <p>
             Showing{" "}
             {Math.min(
@@ -369,7 +374,7 @@ export const HardwareDirectory: React.FC<HardwareDirectoryProps> = ({
                         onClick={() => setCurrentPage(page)}
                         className={`px-3 py-1 border rounded transition-colors ${
                           currentPage === page
-                            ? "bg-purple-600 text-white border-purple-600"
+                            ? "bg-indigo-600 text-white border-indigo-600"
                             : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
                         }`}
                       >
@@ -393,6 +398,7 @@ export const HardwareDirectory: React.FC<HardwareDirectoryProps> = ({
           </div>
         </div>
       </div>
+      </div>
       <AnimatePresence>
         {isAddModalOpen && (
           <AddHardwareModal
@@ -401,6 +407,6 @@ export const HardwareDirectory: React.FC<HardwareDirectoryProps> = ({
           />
         )}
       </AnimatePresence>
-    </div>
+    </main>
   );
 };

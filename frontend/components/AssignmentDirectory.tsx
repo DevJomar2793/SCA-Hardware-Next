@@ -31,8 +31,6 @@ const getInitials = (name: string) => {
   return initials || "NA";
 };
 
-const displayValue = (value: string | null | undefined) => value || "-";
-
 const getStatusStyle = (status: string | null | undefined) => {
   if ((status || "").trim().toLowerCase() === "returned") {
     return "bg-slate-100 text-slate-600 ring-slate-500/20";
@@ -131,14 +129,15 @@ export function AssignmentDirectory({
     getEmployeeFullName(employee) || `Employee #${employee.id}`;
 
   return (
-    <div className="min-h-full bg-gray-100 p-8">
-      <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-3xl font-bold text-slate-800">
-          Hardware Assignments
-        </h1>
-      </div>
+    <main className="page-shell">
+      <div className="page-container">
+      <header className="mb-7">
+        <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-indigo-600">Deployment management</p>
+        <h1 className="page-title">Assignments</h1>
+        <p className="page-description">See who has company equipment and assign available hardware.</p>
+      </header>
 
-      <div className="mb-6 flex flex-wrap items-center gap-4">
+      <div className="data-toolbar surface-card mb-6 flex flex-wrap items-center gap-3 p-4">
         <div className="relative min-w-56 max-w-md flex-1">
           <Search
             className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
@@ -168,6 +167,11 @@ export function AssignmentDirectory({
             ))}
           </select>
         </div>
+        {(searchTerm || departmentFilter !== "All") && (
+          <button type="button" className="button-secondary" onClick={() => { setSearchTerm(""); setDepartmentFilter("All"); }}>
+            Reset
+          </button>
+        )}
       </div>
 
       {isLoading ? (
@@ -209,12 +213,12 @@ export function AssignmentDirectory({
             return (
               <article
                 key={assignmentGroup.employee_details_id}
-                className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition-shadow hover:shadow-md"
+                className="surface-card overflow-hidden transition duration-200 hover:-translate-y-0.5 hover:shadow-md"
               >
-                <div className="h-16 bg-slate-100" />
+                <div className="h-16 bg-linear-to-r from-indigo-50 to-sky-50" />
                 <div className="px-5 pb-5">
                   <div className="-mt-8 mb-4 flex items-end justify-between gap-3">
-                    <div className="flex h-16 w-16 items-center justify-center rounded-full border-4 border-white bg-blue-600 text-lg font-bold text-white shadow-sm">
+                    <div className="flex h-16 w-16 items-center justify-center rounded-2xl border-4 border-white bg-indigo-600 text-lg font-bold text-white shadow-sm">
                       {getInitials(name)}
                     </div>
                     <span
@@ -239,13 +243,13 @@ export function AssignmentDirectory({
                   <div className="mt-5 flex flex-col gap-2">
                     <Link
                       href={`/assignment/${assignmentGroup.assignmentId}/hardware`}
-                      className="inline-flex w-full items-center justify-center rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                      className="button-primary w-full"
                     >
                       View Deployed Hardware
                     </Link>
                     <Link
                       href={`/assignment/employee/${assignmentGroup.employee_details_id}/hardware`}
-                      className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-white px-4 py-2.5 text-sm font-semibold text-blue-700 ring-1 ring-inset ring-blue-200 transition hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                      className="button-secondary w-full text-indigo-700"
                     >
                       <Plus size={16} />
                       Add Hardware
@@ -261,12 +265,12 @@ export function AssignmentDirectory({
             return (
               <article
                 key={`employee-${employee.id}`}
-                className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition-shadow hover:shadow-md"
+                className="surface-card overflow-hidden transition duration-200 hover:-translate-y-0.5 hover:shadow-md"
               >
                 <div className="h-16 bg-slate-100" />
                 <div className="px-5 pb-5">
                   <div className="-mt-8 mb-4 flex items-end justify-between gap-3">
-                    <div className="flex h-16 w-16 items-center justify-center rounded-full border-4 border-white bg-slate-600 text-lg font-bold text-white shadow-sm">
+                    <div className="flex h-16 w-16 items-center justify-center rounded-2xl border-4 border-white bg-slate-600 text-lg font-bold text-white shadow-sm">
                       {getInitials(name)}
                     </div>
                     <span className="mb-1 inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold text-amber-700 ring-1 ring-inset ring-amber-600/20">
@@ -286,7 +290,7 @@ export function AssignmentDirectory({
                   </div>
                   <Link
                     href={`/assignment/employee/${employee.id}/hardware`}
-                    className="mt-5 inline-flex w-full items-center justify-center rounded-lg bg-purple-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                    className="button-primary mt-5 w-full"
                   >
                     Assign Hardware
                   </Link>
@@ -296,6 +300,7 @@ export function AssignmentDirectory({
           })}
         </div>
       )}
-    </div>
+      </div>
+    </main>
   );
 }

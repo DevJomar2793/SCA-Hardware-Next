@@ -121,7 +121,7 @@ export default function AssignmentHardwarePage() {
   }, [loadAssignedHardware]);
 
   return (
-    <div className="min-h-full flex-1 bg-sky-50 p-8">
+    <main className="page-shell min-h-full flex-1">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
@@ -132,7 +132,8 @@ export default function AssignmentHardwarePage() {
               <ArrowLeft size={16} />
               Back to Assignments
             </Link>
-            <h1 className="text-3xl font-bold text-slate-800">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-indigo-600">Deployment record</p>
+            <h1 className="page-title">
               Deployed Hardware
             </h1>
             <p className="mt-1 text-sm text-slate-500">
@@ -141,7 +142,7 @@ export default function AssignmentHardwarePage() {
           </div>
         </div>
 
-        <section className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+        <section className="surface-card overflow-hidden">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 bg-gray-50/50 px-6 py-4">
             <div>
               <h2 className="text-sm font-semibold text-slate-700">
@@ -331,6 +332,6 @@ export default function AssignmentHardwarePage() {
           )}
         </section>
       </div>
-    </div>
+    </main>
   );
 }

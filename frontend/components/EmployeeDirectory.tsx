@@ -6,8 +6,6 @@ import {
   ChevronDown,
   ChevronUp,
   Filter,
-  LayoutGrid,
-  List,
   Loader2,
   Plus,
   Search,
@@ -142,23 +140,26 @@ export function EmployeeDirectory({
   );
 
   return (
-    <div className="flex-1 bg-sky-50 p-8 flex flex-col">
-      <div className="flex flex-wrap items-center justify-between gap-4 mb-8 shrink-0">
+    <main className="page-shell flex flex-1 flex-col">
+      <div className="page-container flex flex-1 flex-col">
+      <header className="mb-7 flex shrink-0 flex-wrap items-end justify-between gap-5">
         <div>
-          <h1 className="text-3xl font-bold text-slate-800">Employee Table</h1>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-indigo-600">People directory</p>
+          <h1 className="page-title">Employees</h1>
+          <p className="page-description">Manage employee details and quickly find the people assigned to company assets.</p>
         </div>
         <button
           type="button"
           onClick={() => setIsAddModalOpen(true)}
-          className="bg-white text-slate-700 px-4 py-2 rounded-lg shadow-sm border border-gray-200 font-medium hover:bg-gray-50 transition-colors flex items-center gap-2"
+          className="button-primary"
         >
           <Plus size={18} />
           Add Employee
         </button>
-      </div>
+      </header>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex-1 flex flex-col overflow-hidden">
-        <div className="p-4 border-b border-gray-100 flex flex-wrap items-center gap-4 shrink-0">
+      <div className="surface-card flex flex-1 flex-col overflow-hidden">
+        <div className="data-toolbar flex shrink-0 flex-wrap items-center gap-3 border-b border-slate-100 p-4">
           <div className="relative flex-1 min-w-56 max-w-md">
             <Search
               className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
@@ -172,7 +173,7 @@ export function EmployeeDirectory({
               className="w-full pl-10 pr-4 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all"
             />
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="ml-auto flex flex-wrap items-center gap-2">
             <div className="flex items-center gap-2">
               <Filter size={16} className="text-gray-400" />
               <select
@@ -198,29 +199,25 @@ export function EmployeeDirectory({
               <option value="On Leave">On Leave</option>
               <option value="Inactive">Inactive</option>
             </select>
-            <div className="flex border border-gray-200 rounded-lg overflow-hidden">
+            {(searchTerm || departmentFilter !== "All" || statusFilter !== "All") && (
               <button
                 type="button"
-                className="p-2 bg-gray-100 text-gray-600 border-r border-gray-200"
-                title="Table view"
-                aria-label="Table view"
+                className="button-secondary"
+                onClick={() => {
+                  setSearchTerm("");
+                  setDepartmentFilter("All");
+                  setStatusFilter("All");
+                  setCurrentPage(1);
+                }}
               >
-                <List size={16} />
+                Reset
               </button>
-              <button
-                type="button"
-                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-colors"
-                title="Grid view"
-                aria-label="Grid view"
-              >
-                <LayoutGrid size={16} />
-              </button>
-            </div>
+            )}
           </div>
         </div>
 
         <div className="overflow-auto flex-1">
-          <table className="w-full min-w-[960px] text-left border-collapse">
+          <table className="data-table w-full min-w-[960px] border-collapse text-left">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-100 sticky top-0 z-10">
                 {renderSortableHeader("Employee Code", "employee_digit_code")}
@@ -396,6 +393,7 @@ export function EmployeeDirectory({
           </div>
         </div>
       </div>
+      </div>
       <AnimatePresence>
         {isAddModalOpen && (
           <AddEmployeeModal
@@ -404,6 +402,6 @@ export function EmployeeDirectory({
           />
         )}
       </AnimatePresence>
-    </div>
+    </main>
   );
 }

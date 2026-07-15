@@ -18,6 +18,7 @@ import {
   UpdateHardwarePayload,
 } from "@/types/hardware";
 import Swal from "sweetalert2";
+import { useDialogFocus } from "@/lib/use-dialog-focus";
 
 interface AddHardwareModalProps {
   hardware?: Hardware;
@@ -171,6 +172,7 @@ export const AddHardwareModal: React.FC<AddHardwareModalProps> = ({
     src: string;
     alt: string;
   } | null>(null);
+  const { dialogRef, trapFocus } = useDialogFocus();
 
   useEffect(() => {
     previewsRef.current = previews;
@@ -181,6 +183,14 @@ export const AddHardwareModal: React.FC<AddHardwareModalProps> = ({
       previewsRef.current.forEach((url) => URL.revokeObjectURL(url));
     };
   }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !isSubmitting && !previewImage) onClose();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isSubmitting, onClose, previewImage]);
 
   const [formData, setFormData] = useState(() => getInitialFormData(hardware));
   const requiredFields = getRequiredFields(formData.hardware_type);
@@ -409,16 +419,22 @@ export const AddHardwareModal: React.FC<AddHardwareModalProps> = ({
       />
 
       <motion.div
+        ref={dialogRef}
+        onKeyDown={trapFocus}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="hardware-dialog-title"
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
         className="relative bg-white w-full max-w-3xl text-gray-600 rounded-2xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col max-h-[90vh]"
       >
         <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-          <h2 className="text-xl font-bold text-slate-800">
+          <h2 id="hardware-dialog-title" className="text-xl font-bold text-slate-800">
             {isEditMode ? "Edit Hardware" : "Add New Hardware"}
           </h2>
           <button
+            type="button"
             onClick={onClose}
             className="p-2 hover:bg-gray-200  rounded-full transition-colors text-slate-400 hover:text-slate-600"
           >
@@ -866,6 +882,8 @@ export const AddHardwareModal: React.FC<AddHardwareModalProps> = ({
                       tabIndex={0}
                       className="relative aspect-square rounded-lg overflow-hidden border border-gray-200 group cursor-zoom-in focus:outline-none focus:ring-2 focus:ring-purple-500/30"
                     >
+                      {/* Blob previews cannot be optimized by next/image. */}
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={`${API_BASE_URL}${imagePath}`}
                         alt="Uploaded hardware"
@@ -915,6 +933,8 @@ export const AddHardwareModal: React.FC<AddHardwareModalProps> = ({
                       tabIndex={0}
                       className="relative aspect-square rounded-lg overflow-hidden border border-gray-200 group cursor-zoom-in focus:outline-none focus:ring-2 focus:ring-purple-500/30"
                     >
+                      {/* Blob previews cannot be optimized by next/image. */}
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={url}
                         alt="Preview"
@@ -937,11 +957,11 @@ export const AddHardwareModal: React.FC<AddHardwareModalProps> = ({
             </div>
           </div>
 
-          <div className="mt-8 flex justify-end gap-3">
+          <div className="sticky bottom-0 -mx-6 -mb-6 mt-8 flex justify-end gap-3 border-t border-slate-100 bg-white px-6 py-4">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 bg-white border border-gray-200 text-gray-600 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+              className="button-secondary"
             >
               Cancel
             </button>
@@ -952,7 +972,7 @@ export const AddHardwareModal: React.FC<AddHardwareModalProps> = ({
                 (!isEditMode && isCktLoading) ||
                 (!isEditMode && Boolean(cktError))
               }
-              className="px-4 py-2 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition-colors flex items-center gap-2 disabled:opacity-50"
+              className="button-primary"
             >
               {isSubmitting && <Loader2 size={18} className="animate-spin" />}
               {isSubmitting

@@ -157,10 +157,6 @@ export default function EmployeeHardwareSelectionPage() {
     currentPage * ASSIGN_HARDWARE_ITEMS_PER_PAGE,
   );
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [hardwareTypeFilter, searchTerm]);
-
   const assignedHardwareIds = useMemo(
     () => new Set(assignedHardwareItems.map((item) => item.id)),
     [assignedHardwareItems],
@@ -216,7 +212,7 @@ export default function EmployeeHardwareSelectionPage() {
     : `Employee #${displayValue(employeeId)}`;
 
   return (
-    <div className="min-h-full flex-1 bg-sky-50 p-8">
+    <main className="page-shell min-h-full flex-1">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
         <div>
           <Link
@@ -226,7 +222,8 @@ export default function EmployeeHardwareSelectionPage() {
             <ArrowLeft size={16} />
             Back to Assignments
           </Link>
-          <h1 className="text-3xl font-bold text-slate-800">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-indigo-600">New deployment</p>
+          <h1 className="page-title">
             Assign Hardware
           </h1>
           <p className="mt-1 text-sm text-slate-500">
@@ -255,7 +252,7 @@ export default function EmployeeHardwareSelectionPage() {
                   type="text"
                   placeholder="Search hardware..."
                   value={searchTerm}
-                  onChange={(event) => setSearchTerm(event.target.value)}
+                  onChange={(event) => { setSearchTerm(event.target.value); setCurrentPage(1); }}
                   className="w-full rounded-lg border border-gray-200 py-2 pl-10 pr-4 text-sm text-gray-600 transition-all focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/20"
                 />
               </div>
@@ -263,9 +260,7 @@ export default function EmployeeHardwareSelectionPage() {
                 <Filter size={16} className="text-gray-400" />
                 <select
                   value={hardwareTypeFilter}
-                  onChange={(event) =>
-                    setHardwareTypeFilter(event.target.value)
-                  }
+                  onChange={(event) => { setHardwareTypeFilter(event.target.value); setCurrentPage(1); }}
                   className="rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-600 outline-none transition-colors hover:bg-gray-50 focus:ring-2 focus:ring-purple-500/20"
                 >
                   <option value="All">All Hardware Types</option>
@@ -539,6 +534,6 @@ export default function EmployeeHardwareSelectionPage() {
           )}
         </section>
       </div>
-    </div>
+    </main>
   );
 }

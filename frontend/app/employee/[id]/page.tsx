@@ -167,7 +167,7 @@ export default function EmployeeDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-full flex-1 items-center justify-center bg-sky-50 p-8">
+      <div className="page-shell flex min-h-full flex-1 items-center justify-center">
         <div className="flex flex-col items-center rounded-xl border border-gray-200 bg-white p-8 text-slate-500 shadow-sm">
           <Loader2 className="mb-4 h-10 w-10 animate-spin text-purple-600" />
           <p className="font-medium">Fetching employee details...</p>
@@ -178,7 +178,7 @@ export default function EmployeeDetailPage() {
 
   if (error || !employee) {
     return (
-      <div className="flex min-h-full flex-1 items-center justify-center bg-sky-50 p-8">
+      <div className="page-shell flex min-h-full flex-1 items-center justify-center">
         <div className="w-full max-w-md rounded-xl border border-red-200 bg-white p-8 text-center shadow-sm">
           <p className="mb-2 font-semibold text-red-700">
             Unable to load employee
@@ -207,7 +207,7 @@ export default function EmployeeDetailPage() {
   }
 
   return (
-    <div className="min-h-full flex-1 bg-sky-50 p-8">
+    <main className="page-shell min-h-full flex-1">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <Link
@@ -343,6 +343,6 @@ export default function EmployeeDetailPage() {
           />
         )}
       </AnimatePresence>
-    </div>
+    </main>
   );
 }
